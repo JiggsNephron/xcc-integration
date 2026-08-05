@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from custom_components.xcc.const import ENGLISH_NAME_OVERRIDES
+from custom_components.xcc.const import ENGLISH_NAME_OVERRIDES, STATUS_XML_DESCRIPTOR
 
 
 def test_common_data_page_english_name_overrides() -> None:
@@ -17,6 +17,19 @@ def test_common_data_page_english_name_overrides() -> None:
 
     for prop, english_name in expected.items():
         assert ENGLISH_NAME_OVERRIDES[prop]["friendly_name_en"] == english_name
+
+
+def test_circulation_pump_status_names() -> None:
+    """SOBEH status fields describe pumps, not heating-consumer slots."""
+    for index in range(10):
+        assert (
+            STATUS_XML_DESCRIPTOR[f"SOBEH{index}RUN"]["friendly_name_en"]
+            == f"Circulation pump {index} running"
+        )
+        assert (
+            STATUS_XML_DESCRIPTOR[f"SOBEH{index}VIS"]["friendly_name_en"]
+            == f"Circulation pump {index} available"
+        )
 
 
 def test_pv_overheating_english_name_overrides() -> None:

@@ -233,19 +233,20 @@ STATUS_XML_DESCRIPTOR: dict = {
         "writable": False,
     },
 }
-# SOBEH0–9: per-circuit run/visibility flags rendered as icon-only switchGo elements in
-# TRANSF.XSL — no per-index text labels exist in the XSL, names follow XCC convention.
+# SOBEH0–9: circulation-pump run/visibility flags rendered as icon-only switchGo
+# elements under the "Circulation pumps" heading in TRANSF.XSL. No per-index
+# text labels exist in the XSL, so retain the controller's zero-based numbering.
 for _i in range(10):
     STATUS_XML_DESCRIPTOR[f"SOBEH{_i}RUN"] = {
-        "friendly_name": f"Oběh {_i} běží",
-        "friendly_name_en": f"Circuit {_i} running",
+        "friendly_name": f"Oběhové čerpadlo {_i} běží",
+        "friendly_name_en": f"Circulation pump {_i} running",
         "unit": "",
         "entity_type": "binary_sensor",
         "writable": False,
     }
     STATUS_XML_DESCRIPTOR[f"SOBEH{_i}VIS"] = {
-        "friendly_name": f"Oběh {_i} aktivní",
-        "friendly_name_en": f"Circuit {_i} active",
+        "friendly_name": f"Oběhové čerpadlo {_i} dostupné",
+        "friendly_name_en": f"Circulation pump {_i} available",
         "unit": "",
         "entity_type": "binary_sensor",
         "writable": False,
