@@ -394,15 +394,71 @@ HIDDEN_BINARY_SENSORS: dict = {
     },
 }
 
+# English names for fields whose controller descriptor only provides Czech text.
+# These are applied after descriptor parsing without replacing type, unit, range,
+# options, or writeability metadata discovered from the controller.
+ENGLISH_NAME_OVERRIDES: dict[str, dict[str, str]] = {
+    "FVESTATS-SSR-OUTPUT0": {"friendly_name_en": "SSR output 1"},
+    "FVESTATS-SSR-OUTPUT1": {"friendly_name_en": "SSR output 2"},
+    "FVESTATS-SSR-OUTPUT2": {"friendly_name_en": "SSR output 3"},
+    "FVESTATS-SSR-SPOTREBASUM": {"friendly_name_en": "Total SSR power"},
+    "FVE-SSR-OUTPUT0-ENABLED": {"friendly_name_en": "SSR output 1 enabled"},
+    "FVE-NZUCHARGELIMITENABLED": {
+        "friendly_name_en": (
+            "Charge battery only after the permitted grid export is reached"
+        )
+    },
+    "FVESTATS-NZUCHARGELIMITACTIVE": {
+        "friendly_name_en": "Charging limitation active"
+    },
+    "FVE-NODISCHRGLOWPRICEENABLED": {
+        "friendly_name_en": (
+            "Disable battery discharge when the electricity price is low"
+        )
+    },
+    "FVE-NODISCHRGLOWPRICE": {
+        "friendly_name_en": (
+            "Do not discharge battery below this electricity price"
+        )
+    },
+    "FVE-CHARGEATCHEAPHOUR": {
+        "friendly_name_en": (
+            "Charge battery from the grid when the electricity price is low"
+        )
+    },
+    "FVE-CHARGEATCHEAPMAXPRICE": {
+        "friendly_name_en": (
+            "Charge battery from the grid below this electricity price"
+        )
+    },
+    "FVE-CHARGEATCHEAPMAXSOC": {
+        "friendly_name_en": "Stop grid charging above this battery SOC"
+    },
+    "FVE-CHARGEATCHEAPCHRGPOWER": {"friendly_name_en": "Grid charging power"},
+}
+
+for _slot in range(3):
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-NAME"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} name"
+    }
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-VERSION"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} version"
+    }
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-DATETIME"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} date"
+    }
+
 # Single descriptor-override table consumed by the coordinator at descriptor-load time.
 # Sources are grouped above purely for readability; semantically all entries replace any
 # config inferred from descriptor XML or from the _BOOL_i register suffix:
 #   * STATUS_XML_DESCRIPTOR  — metadata for STATUS.XML (no paired descriptor file)
 #   * HIDDEN_SWITCHES        — promotes hidden _BOOL_i fields to writable switches
 #   * HIDDEN_BINARY_SENSORS  — pins read-only _BOOL_i status fields as binary_sensor
-# Add new manual overrides to whichever of the three source dicts fits the intent.
+#   * ENGLISH_NAME_OVERRIDES — supplies names omitted by controller descriptors
+# Add new manual overrides to whichever source dict fits the intent.
 DESCRIPTOR_OVERRIDES: dict = {
     **STATUS_XML_DESCRIPTOR,
     **HIDDEN_SWITCHES,
     **HIDDEN_BINARY_SENSORS,
+    **ENGLISH_NAME_OVERRIDES,
 }
