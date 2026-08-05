@@ -6,6 +6,32 @@ from pathlib import Path
 from custom_components.xcc.const import ENGLISH_NAME_OVERRIDES
 
 
+def test_common_data_page_english_name_overrides() -> None:
+    """Replace raw Czech register names used by data-only fields."""
+    expected = {
+        "SCAS": "Controller date and time",
+        "SCHYBA": "Controller error code",
+        "SNAZEV1": "Controller name",
+        "SNAZEV2": "Installation name",
+    }
+
+    for prop, english_name in expected.items():
+        assert ENGLISH_NAME_OVERRIDES[prop]["friendly_name_en"] == english_name
+
+
+def test_pv_overheating_english_name_overrides() -> None:
+    """Avoid mixing a Czech parent-row label with English column labels."""
+    expected = {
+        "TO-FVEPRETOPENI-PRIORITA": "PV overheating - Priority",
+        "TO-FVEPRETOPENI-PREBYTEK": "PV overheating - Minimum surplus",
+        "TO-FVEPRETOPENI-T": "PV overheating - Overheat by",
+        "TO-FVEPRETOPENI-POVOLENI": "PV overheating - Enable",
+    }
+
+    for prop, english_name in expected.items():
+        assert ENGLISH_NAME_OVERRIDES[prop]["friendly_name_en"] == english_name
+
+
 def test_fve_english_name_overrides() -> None:
     """Provide English names for FVE fields whose descriptors are Czech-only."""
     expected = {

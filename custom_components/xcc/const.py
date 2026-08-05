@@ -387,6 +387,27 @@ HIDDEN_BINARY_SENSORS: dict = {
 # These are applied after descriptor parsing without replacing type, unit, range,
 # options, or writeability metadata discovered from the controller.
 ENGLISH_NAME_OVERRIDES: dict[str, dict[str, str]] = {
+    # Common data-page fields have no descriptor labels, so the raw Czech
+    # register names otherwise leak into English entity names.
+    "SCAS": {"friendly_name_en": "Controller date and time"},
+    "SCHYBA": {"friendly_name_en": "Controller error code"},
+    "SNAZEV1": {"friendly_name_en": "Controller name"},
+    "SNAZEV2": {"friendly_name_en": "Installation name"},
+    # The heating-circuit descriptor translates the individual column labels
+    # but omits text_en for the parent row ("Přetápění z FVE").  Supply complete
+    # names so English mode never combines that Czech prefix with English text.
+    "TO-FVEPRETOPENI-PRIORITA": {
+        "friendly_name_en": "PV overheating - Priority"
+    },
+    "TO-FVEPRETOPENI-PREBYTEK": {
+        "friendly_name_en": "PV overheating - Minimum surplus"
+    },
+    "TO-FVEPRETOPENI-T": {
+        "friendly_name_en": "PV overheating - Overheat by"
+    },
+    "TO-FVEPRETOPENI-POVOLENI": {
+        "friendly_name_en": "PV overheating - Enable"
+    },
     "FVESTATS-SSR-OUTPUT0": {"friendly_name_en": "SSR output 1"},
     "FVESTATS-SSR-OUTPUT1": {"friendly_name_en": "SSR output 2"},
     "FVESTATS-SSR-OUTPUT2": {"friendly_name_en": "SSR output 3"},
