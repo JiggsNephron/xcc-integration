@@ -41,6 +41,7 @@ _normalize_page_to_device = _entity_helpers._normalize_page_to_device
 circuit_of_prop = _entity_helpers.circuit_of_prop
 lookup_with_normalized_fallback = _entity_helpers.lookup_with_normalized_fallback
 process_entities = _entity_helpers.process_entities
+number_step_for_prop = _entity_helpers.number_step_for_prop
 
 circuit_from_okruh_page = _xcc_client.circuit_from_okruh_page
 okruh_data_page = _xcc_client.okruh_data_page
@@ -187,6 +188,21 @@ def test_per_circuit_active_flags_survive_full_processing_pipeline():
         == "0"
     )
     assert metadata["xcc_okruh4_blokyspotreby_ok"]["page"] == "OKRUH14.XML"
+
+
+class TestNumberStep:
+    @pytest.mark.parametrize(
+        "prop",
+        ["TO-POZADOVANA", "OKRUH1-POZADOVANA", "TUVPOZADOVANA"],
+    )
+    def test_primary_temperature_targets_use_half_degree_steps(self, prop):
+        assert number_step_for_prop(prop, 1.0) == 0.5
+
+    def test_other_numbers_preserve_descriptor_step(self):
+        assert number_step_for_prop("TO-KONSTANTA", 0.1) == 0.1
+
+    def test_other_numbers_keep_existing_default(self):
+        assert number_step_for_prop("TO-KONSTANTA", None) == 1.0
 
 
 @pytest.mark.skipif(
