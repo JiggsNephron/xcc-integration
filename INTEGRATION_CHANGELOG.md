@@ -2,6 +2,17 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.19] - 2026-09-18
+
+### Fixed
+
+- Prefer explicit English names for controller fields and device labels when
+  the integration language is English.
+- Translate the remaining heating-circuit labels and correct the circulation
+  pump status names.
+- Use 0.5 °C steps for the primary room and DHW temperature targets where the
+  controller descriptor omits a step.
+
 ## [1.15.18] - 2026-09-18
 
 ### New Features

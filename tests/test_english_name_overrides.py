@@ -1,9 +1,19 @@
 """Tests for English names missing from controller descriptors."""
 
 import json
+import importlib.util
 from pathlib import Path
 
-from custom_components.xcc.const import ENGLISH_NAME_OVERRIDES, STATUS_XML_DESCRIPTOR
+_CONST_PATH = (
+    Path(__file__).parents[1] / "custom_components" / "xcc" / "const.py"
+)
+_SPEC = importlib.util.spec_from_file_location("_xcc_const_english_tests", _CONST_PATH)
+assert _SPEC and _SPEC.loader
+_CONST = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_CONST)
+
+ENGLISH_NAME_OVERRIDES = _CONST.ENGLISH_NAME_OVERRIDES
+STATUS_XML_DESCRIPTOR = _CONST.STATUS_XML_DESCRIPTOR
 
 
 def test_common_data_page_english_name_overrides() -> None:
