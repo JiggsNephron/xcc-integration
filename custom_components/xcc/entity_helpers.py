@@ -34,6 +34,10 @@ _CIRCUIT_SCOPED_PROPS = frozenset(
         "BLOKYSPOTREBY-UTLUM",
         "TOPNEOKRUHYOUT-POCASIVLIV",
         "TOPNEOKRUHYADAPTACEOUT",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-BOOST",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-ECO",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-OFF",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-IGNORED",
     }
 )
 _TEMPERATURE_SETPOINT_PROPS = {"TO-POZADOVANA", "TUVPOZADOVANA"}
@@ -41,6 +45,9 @@ _TEMPERATURE_SETPOINT_PROPS = {"TO-POZADOVANA", "TUVPOZADOVANA"}
 
 def _circuit_base_prop(prop: str) -> str | None:
     """Return the bare prop behind a circuit-namespaced one, else None."""
+    page_match = re.fullmatch(r"PAGE-[A-Z0-9]+-(.+)", (prop or "").upper())
+    if page_match:
+        return page_match.group(1)
     match = _OKRUH_PROP_RE.match((prop or "").upper())
     if not match:
         return None
@@ -368,6 +375,12 @@ def process_entities(
                     entity_type = parsed_type
 
             descriptor_config = config or {}
+            if prop.startswith("PAGE-"):
+                # Page identities and schedule snapshots are read-only telemetry.
+                entity_type = "sensor"
+                descriptor_config = {**descriptor_config, "entity_type": "sensor",
+                                     "writable": False, "unit": "",
+                                     "data_type": "string"}
             if (
                 entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
