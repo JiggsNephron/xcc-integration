@@ -68,6 +68,18 @@ class TestCircuitPageMapping:
 
 
 class TestPropNamespacing:
+    @pytest.mark.parametrize("prop", [
+        "TOPNEOKRUHYOUT-POCASIVLIV", "TOPNEOKRUHYADAPTACEOUT",
+    ])
+    def test_influence_diagnostics_are_circuit_scoped(self, prop):
+        assert qualify_circuit_prop(prop, 0) == prop
+        qualified = qualify_circuit_prop(prop, 1)
+        assert qualified == f"OKRUH1-{prop}"
+        assert unqualify_circuit_prop(qualified) == (prop, 1)
+        assert _circuit_base_prop(qualified) == prop
+        config = {prop: {"entity_type": "sensor", "unit": ""}}
+        assert lookup_with_normalized_fallback(qualified, config) == config[prop]
+
     def test_circuit_zero_left_bare(self):
         """Circuit 0 keeps existing entity_ids — no namespacing, ever."""
         assert qualify_circuit_prop("TO-KONSTANTA", 0) == "TO-KONSTANTA"
@@ -150,6 +162,32 @@ class TestDescriptorFallback:
 
     def test_missing_stays_missing(self):
         assert lookup_with_normalized_fallback("OKRUH2-NOPE", {}, "dflt") == "dflt"
+
+
+@pytest.mark.parametrize("prop", [
+    "TOPNEOKRUHYOUT-POCASIVLIV", "TOPNEOKRUHYADAPTACEOUT",
+])
+def test_per_circuit_influences_survive_full_processing_pipeline(prop):
+    raw = []
+    for page, address, value in [
+        ("OKRUH10.XML", "10996", "-9.8"),
+        ("OKRUH11.XML", "11012", "0.0"),
+    ]:
+        raw += parse_xml_entities(
+            f'<PAGE><INPUT P="{prop}" NAME="__R{address}_REAL_.1f" '
+            f'VALUE="{value}"/></PAGE>', page,
+        )
+    processed, metadata = process_entities(
+        raw, {prop: {"entity_type": "sensor", "writable": False, "unit": ""}},
+        language="english",
+    )
+    suffix = prop.lower().replace("-", "_")
+    for entity_id, value, page in [
+        (f"xcc_{suffix}", "-9.8", "OKRUH10.XML"),
+        (f"xcc_okruh1_{suffix}", "0.0", "OKRUH11.XML"),
+    ]:
+        assert processed["sensors"][entity_id]["state"] == value
+        assert metadata[entity_id]["page"] == page
 
 
 def test_per_circuit_active_flags_survive_full_processing_pipeline():

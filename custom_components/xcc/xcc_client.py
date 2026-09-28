@@ -27,7 +27,8 @@ _auth_locks = {}
 #
 # Every circuit's data page (OKRUH10.XML = circuit 0, OKRUH12.XML = circuit 2,
 # ...) carries the SAME unprefixed ``TO-*`` props and the same three
-# ``BLOKYSPOTREBY-*`` live-status props. The okruh.xml descriptor is
+# ``BLOKYSPOTREBY-*`` live-status props, plus weather/room influence diagnostics.
+# The okruh.xml descriptor is
 # byte-identical for every ``?page=N``. Entities are keyed by prop alone, so
 # without a namespace two circuits collide and one is silently dropped.
 # Circuit 0 keeps its bare names so existing entity_ids/unique_ids (and recorder
@@ -41,6 +42,8 @@ _CIRCUIT_SCOPED_PROPS = frozenset(
         "BLOKYSPOTREBY-OK",
         "BLOKYSPOTREBY-SET",
         "BLOKYSPOTREBY-UTLUM",
+        "TOPNEOKRUHYOUT-POCASIVLIV",
+        "TOPNEOKRUHYADAPTACEOUT",
     }
 )
 
@@ -61,7 +64,8 @@ def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
 
     Besides ``TO-*``, each okruh page publishes its own consumption-block
     active flag, requested-water temperature and attenuation flag under the
-    same three ``BLOKYSPOTREBY-*`` names. Their controller register addresses
+    same three ``BLOKYSPOTREBY-*`` names, plus weather and room influence
+    diagnostics. Their controller register addresses
     differ by circuit, so they must be namespaced too. Other props on an okruh
     page (SVENKU, FVE-*, ...) remain global duplicates and keep their names.
     """

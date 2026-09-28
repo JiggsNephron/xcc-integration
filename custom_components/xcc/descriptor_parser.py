@@ -220,6 +220,15 @@ class XCCDescriptorParser:
         self, prop: str, row: ET.Element, element: ET.Element,
     ) -> str:
         """Infer unit from context when not explicitly specified."""
+        # These are control influences, not absolute room temperatures or
+        # durations (POCASI contains CAS). The controller descriptor supplies
+        # no unit: leave it unspecified rather than inventing hours or Celsius.
+        if prop.upper() in {
+            "TOPNEOKRUHYOUT-POCASIVLIV",
+            "TOPNEOKRUHYADAPTACEOUT",
+        }:
+            return ""
+
         # Check row context first for temperature-related text
         if row is not None:
             row_text = (row.get("text_en", "") or row.get("text", "")).lower()

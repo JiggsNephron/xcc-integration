@@ -7,6 +7,18 @@ import logging
 from pathlib import Path
 
 
+@pytest.mark.parametrize("prop,text", [
+    ("TOPNEOKRUHYOUT-POCASIVLIV", "Weather influence"),
+    ("TOPNEOKRUHYADAPTACEOUT", "Room temp. influence"),
+])
+def test_influence_units_are_not_guessed(prop, text):
+    parser = _load_descriptor_parser().XCCDescriptorParser()
+    xml = f'<page><block><row text_en="{text}"><label prop="{prop}"/></row></block></page>'
+    config = parser._parse_single_descriptor(xml, "okruh.xml")[prop]
+    assert not config.get("unit")
+    assert not config.get("device_class")
+
+
 def test_real_descriptor_parser_date_fix():
     """Test the real descriptor parser with the date element fix."""
     
