@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 
-def build_description(prop, unit, value, data_type):
+def build_description(prop, unit, value, data_type, nested=False):
     source = Path(__file__).parents[1] / "custom_components/xcc/sensor.py"
     tree = ast.parse(source.read_text(encoding="utf-8"))
     namespace = {"PERCENTAGE": "%", "_LOGGER": logging.getLogger(__name__),
@@ -36,10 +36,24 @@ def build_description(prop, unit, value, data_type):
     exec(compile(module, str(source), "exec"), namespace)
     coordinator = SimpleNamespace(get_entity_config=lambda _: {"unit": unit},
                                   _get_friendly_name=lambda config, p: p)
-    return namespace["_create_entity_description"](None, coordinator, {
+    data = {
         "entity_id": "xcc_" + prop.lower(), "prop": prop, "state": value,
         "attributes": {"data_type": data_type},
-    })
+    }
+    if nested:
+        data = {"entity_id": data["entity_id"], "prop": prop,
+                "data": {"state": value, "attributes": data["attributes"]}}
+    return namespace["_create_entity_description"](None, coordinator, data)
+
+
+def test_registry_metadata_shape_keeps_numeric_protocol_type():
+    result = build_description("TOPNEOKRUHYADAPTACEOUT", "", "-9.8", "numeric", nested=True)
+    assert result.state_class == "measurement"
+
+
+def test_unitless_temperature_named_field_has_no_invalid_device_class():
+    result = build_description("MZOSTATS-ZONA1-TEPLOTA", "", "20", "numeric")
+    assert result.device_class is None
 
 
 @pytest.mark.parametrize("prop", ["SVYKON", "TCSTAV0-VYKON", "FVE-SOC"])

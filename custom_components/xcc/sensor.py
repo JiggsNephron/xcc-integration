@@ -255,6 +255,13 @@ class XCCSensor(XCCEntity, SensorEntity):
         entity_data: dict[str, Any],
     ) -> SensorEntityDescription:
         """Create entity description for the sensor."""
+        # get_entities_by_type returns registry metadata, whereas the fallback
+        # platform path supplies processed state data. Preserve raw type hints
+        # in both shapes before deriving numeric metadata.
+        if "data" in entity_data:
+            raw = entity_data.get("data", {})
+            entity_data = {**entity_data, "attributes": raw.get("attributes", {}),
+                           "state": raw.get("state")}
         entity_id = entity_data.get("entity_id", "")
         prop = entity_data.get("prop", "").upper()
 
@@ -317,7 +324,7 @@ class XCCSensor(XCCEntity, SensorEntity):
                 ha_unit,
                 device_class,
             )
-        else:
+        elif ha_unit:
             # Fallback: Try to determine device class from field name patterns
             field_name_lower = entity_id.lower()
             if "temp" in field_name_lower or "teplota" in field_name_lower:

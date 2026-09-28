@@ -241,7 +241,10 @@ class XCCDescriptorParser:
         if element is not None and element.find("option") is not None:
             return ""
         if row is not None and len(row.findall(".//*[@prop]")) > 1:
-            return ""
+            row = None  # Keep property-specific inference, discard mixed row context.
+
+        if prop.upper() == "TTUV":
+            return "°C"  # DHW measured water temperature; often shares a control row.
 
         # Check row context first for temperature-related text
         if row is not None:
