@@ -2,6 +2,16 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.20] - 2026-09-28
+
+### Fixed
+
+- Keep weather and room-temperature influence diagnostics separate for each
+  heating circuit, retaining the existing first-circuit entity IDs.
+- Leave influence units unspecified when the controller supplies no unit,
+  instead of incorrectly inferring hours or absolute temperature.
+- Includes the English naming and DHW sanitation fixes from 1.15.19.
+
 ## [1.15.19] - 2026-09-18
 
 ### Fixed
