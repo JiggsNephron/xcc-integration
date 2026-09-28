@@ -1,5 +1,5 @@
 """Regression coverage for indicator/control and descriptor fallback audit."""
-from tests.test_circuit_namespacing import _load_module, process_entities
+from tests.test_entity_naming import _load_module, process_entities
 
 const = _load_module("_xcc_audit_const", "const.py")
 
