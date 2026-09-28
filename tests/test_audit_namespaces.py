@@ -38,3 +38,16 @@ def test_four_schedules_survive_processing_with_correct_sources():
     assert {v["page"] for v in data["sensors"].values()} == set(pages)
     assert {v["state"] for v in data["sensors"].values()} == {"00:00", "01:00", "02:00", "03:00"}
     assert all(not v["descriptor_config"]["writable"] for v in metadata.values())
+
+
+@pytest.mark.parametrize("prop", ["MZ", "WEB-VOLBYVLIVUPROSTORU",
+    "WEB-BLOKREZIM-UTLUMBIVALENCE", "WEB-BLOKREZIM-PROSTORADAPTIVNI",
+    "WEB-VLIVPROSTORU-ADAPTIVNIMAXT", "WEB-VLIVPROSTORU-ADAPTIVNIMINT",
+    "OKRUHDOCASNEBEZCIDLA"])
+def test_additional_local_registers_preserve_page_and_descriptor(prop):
+    key = qualify_circuit_prop(prop, 1)
+    assert key == f"OKRUH1-{prop}"
+    assert unqualify_circuit_prop(key) == (prop, 1)
+    config = {"entity_type": "switch", "writable": True}
+    assert _entity_helpers.lookup_with_normalized_fallback(key, {prop: config}) == config
+    assert qualify_circuit_prop(prop, 0) == prop
