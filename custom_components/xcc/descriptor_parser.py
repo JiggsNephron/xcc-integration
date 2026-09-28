@@ -134,7 +134,7 @@ class XCCDescriptorParser:
         unit = element.get("unit_en") or element.get("unit", "")
 
         # If no unit on element, try to infer from context or prop name
-        if not unit:
+        if "unit" not in element.attrib and "unit_en" not in element.attrib:
             unit = self._infer_unit_from_context(prop, row, element)
 
         # Determine device class from unit
@@ -220,6 +220,12 @@ class XCCDescriptorParser:
         self, prop: str, row: ET.Element, element: ET.Element,
     ) -> str:
         """Infer unit from context when not explicitly specified."""
+        # Naming context may intentionally come from a previous titled row.
+        # Units must only use the physical row containing this element.
+        if element is not None:
+            immediate_row = self._find_immediate_parent_row(element)
+            if immediate_row is not None:
+                row = immediate_row
         # These are control influences, not absolute room temperatures or
         # durations (POCASI contains CAS). The controller descriptor supplies
         # no unit: leave it unspecified rather than inventing hours or Celsius.
@@ -227,6 +233,14 @@ class XCCDescriptorParser:
             "TOPNEOKRUHYOUT-POCASIVLIV",
             "TOPNEOKRUHYADAPTACEOUT",
         }:
+            return ""
+
+        # Row labels can describe several unrelated controls. Never borrow a
+        # neighbour's unit (e.g. priority, surplus watts and temperature uplift).
+        # Boolean option labels likewise must not inherit runhours.
+        if element is not None and element.find("option") is not None:
+            return ""
+        if row is not None and len(row.findall(".//*[@prop]")) > 1:
             return ""
 
         # Check row context first for temperature-related text
@@ -462,7 +476,7 @@ class XCCDescriptorParser:
         elif element.tag == "number":
             # Get unit with enhanced detection
             unit = element.get("unit_en") or element.get("unit", "")
-            if not unit:
+            if "unit" not in element.attrib and "unit_en" not in element.attrib:
                 unit = self._infer_unit_from_context(prop, parent_row, element)
 
             # Determine device class from unit
