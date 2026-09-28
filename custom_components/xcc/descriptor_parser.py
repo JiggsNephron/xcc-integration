@@ -142,11 +142,7 @@ class XCCDescriptorParser:
         friendly_name_cz = text or text_en or self._format_prop_name_czech(prop)
 
         # Get unit from element (try both unit and unit_en)
-        unit = element.get("unit_en") or element.get("unit", "")
-
-        # If no unit on element, try to infer from context or prop name
-        if "unit" not in element.attrib and "unit_en" not in element.attrib:
-            unit = self._infer_unit_from_context(prop, row, element)
+        unit = self._resolve_unit(prop, row, element)
 
         # Determine device class from unit
         device_class = self._determine_device_class_from_unit(unit)
@@ -226,6 +222,30 @@ class XCCDescriptorParser:
         }
 
         return unit_to_device_class.get(unit)
+
+    def _resolve_unit(self, prop: str, row: ET.Element, element: ET.Element) -> str:
+        """Resolve explicit units, known telemetry, then conservative inference.
+
+        XCC uses unit="" to hide some display suffixes, including run-hours.
+        Only these verified numeric telemetry families override that empty
+        display attribute; arbitrary priorities and other controls stay unitless.
+        """
+        explicit = element.get("unit_en") or element.get("unit", "")
+        if explicit:
+            return explicit
+        if element.tag == "number" and "readonly" in element.get("config", ""):
+            key = prop.upper()
+            if key in {"TTUV", "TTUVDRUHA"} or re.fullmatch(
+                r"TCSTAV\d+-(TCJ|TS|TD|TE|TL)", key
+            ):
+                return "°C"
+            if key in {"BIVALENCEMOTOHODINY", "TUVEXTERNIOHREVMOTOHODINY"} or re.fullmatch(
+                r"BIVALENCEMOTOHODINYSTUPNE[123]", key
+            ):
+                return "h"
+        if "unit" in element.attrib or "unit_en" in element.attrib:
+            return ""
+        return self._infer_unit_from_context(prop, row, element)
 
     def _infer_unit_from_context(
         self, prop: str, row: ET.Element, element: ET.Element,
@@ -489,9 +509,7 @@ class XCCDescriptorParser:
 
         elif element.tag == "number":
             # Get unit with enhanced detection
-            unit = element.get("unit_en") or element.get("unit", "")
-            if "unit" not in element.attrib and "unit_en" not in element.attrib:
-                unit = self._infer_unit_from_context(prop, parent_row, element)
+            unit = self._resolve_unit(prop, parent_row, element)
 
             # Determine device class from unit
             device_class = self._determine_device_class_from_unit(unit)
