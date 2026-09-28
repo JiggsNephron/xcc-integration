@@ -178,7 +178,12 @@ def test_known_friendly_names(sample_data_dir, prop, expected_id, expected_en):
     if meta is None:
         pytest.skip(f"{prop} not present in sample data; nothing to verify")
     assert meta["prop"] == prop
-    assert meta["descriptor_config"].get("friendly_name_en") == expected_en
+    config = meta["descriptor_config"]
+    actual = config.get("friendly_name_en")
+    if config.get("configured_name"):
+        assert actual.endswith(" — " + expected_en)
+    else:
+        assert actual == expected_en
 
 
 def test_dhw_sanitation_output_is_read_only_binary_sensor(sample_data_dir):
