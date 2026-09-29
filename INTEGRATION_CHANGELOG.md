@@ -2,6 +2,18 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.26] - 2026-09-29
+
+### Added
+
+- Read-only controller system-fault diagnostic with named active faults and a
+  fault count, decoded from individual and packed flags on the Current errors page.
+- Log each observed fault activation and clearance once. Missing diagnostic data
+  makes the sensor unavailable instead of falsely clearing faults.
+- Preserve all combined fixes from 1.15.25; existing entity IDs and units unchanged.
+- Faults that appear and clear between polls can be missed; this is not a
+  controller historical-error-log importer. See docs/system-faults.md.
+
 ## [1.15.20] - 2026-09-28
 
 ### Fixed
