@@ -231,10 +231,13 @@ def test_per_circuit_active_flags_survive_full_processing_pipeline():
 class TestNumberStep:
     @pytest.mark.parametrize(
         "prop",
-        ["TO-POZADOVANA", "OKRUH1-POZADOVANA", "TUVPOZADOVANA"],
+        ["TO-POZADOVANA", "OKRUH1-POZADOVANA", "OKRUH4-POZADOVANA",
+         "OKRUH12-POZADOVANA", "okruh2-pozadovana", "TUVPOZADOVANA",
+         "PAGE-TUV21-TUVPOZADOVANA"],
     )
-    def test_primary_temperature_targets_use_half_degree_steps(self, prop):
-        assert number_step_for_prop(prop, 1.0) == 0.5
+    @pytest.mark.parametrize("configured_step", [None, 1.0, 0.5, 0.1])
+    def test_temperature_targets_use_tenth_degree_steps(self, prop, configured_step):
+        assert number_step_for_prop(prop, configured_step) == 0.1
 
     def test_other_numbers_preserve_descriptor_step(self):
         assert number_step_for_prop("TO-KONSTANTA", 0.1) == 0.1
