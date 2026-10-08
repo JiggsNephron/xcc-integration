@@ -38,7 +38,7 @@ def test_specific_problematic_entities():
                     {
                         "prop": "TO-EK50",
                         "expected_czech": "Posun křivky",
-                        "expected_english": "Curve shift"
+                        "expected_english": "Heating curve point 6 — outside temperature"
                     },
                     {
                         "prop": "TO-PR-VITR-POSUN",

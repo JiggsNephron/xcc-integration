@@ -2,7 +2,11 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
-## [1.15.28] - 2026-10-08
+## [1.15.29] - 2026-10-08
+
+Version 1.15.28 was not released: full HA CI caught an outdated curve-point
+translation test expectation. 1.15.29 corrects that expectation; control behavior
+is unchanged.
 
 ### Added
 
