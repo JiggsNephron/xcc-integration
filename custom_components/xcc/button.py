@@ -50,6 +50,10 @@ async def async_setup_entry(
                 if entity_type == "button":
                     button = XCCButton(coordinator, entity_data)
                     buttons.append(button)
+                    if prop == "MAIN-PRIORIZATORSPOTREBY-PRITUV-SANITACE":
+                        config = coordinator.get_entity_config(prop)
+                        if any(str(action.get("value")) == "0" for action in config.get("button_actions", [])):
+                            buttons.append(XCCSanitationStop(coordinator, entity_data))
                     _LOGGER.info("✅ Button: %s | Action:%s", button.name, entity_data.get("value", "N/A"))
                 else:
                     _LOGGER.debug("Skipping %s: type=%s", prop, entity_type)
@@ -99,7 +103,9 @@ class XCCButton(XCCEntity, ButtonEntity):
         self._attr_entity_category = None  # Buttons are typically configuration entities
 
         # Get button action value if specified
-        self._button_value = entity_data.get("value")
+        self._button_value = coordinator.get_entity_config(entity_data.get("prop", "")).get(
+            "button_value", entity_data.get("value")
+        )
         
         _LOGGER.debug(
             "🔘 Button entity created: %s | Value: %s",
@@ -185,3 +191,18 @@ class XCCButton(XCCEntity, ButtonEntity):
                 return "mdi:cog"  # System
         else:
             return "mdi:gesture-tap-button"  # Generic button
+
+
+class XCCSanitationStop(XCCButton):
+    """A separate Stop action on the same register, preserving the Run ID."""
+
+    def __init__(self, coordinator, entity_data):
+        super().__init__(coordinator, entity_data)
+        self.entity_id = f"button.{self.entity_id_suffix}_stop"
+        self._attr_unique_id += "_stop"
+        self._attr_name = "Stop DHW sanitation"
+        self._button_value = "0"
+
+    @property
+    def icon(self):
+        return "mdi:stop-circle-outline"

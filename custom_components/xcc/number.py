@@ -18,6 +18,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
 from .entity_helpers import adaptive_band_unit, number_step_for_prop
+from .control_helpers import duration_prop, duration_minutes, duration_value, native_number_step
+from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,6 +67,12 @@ async def async_setup_entry(
             except Exception as e:
                 _LOGGER.error("❌ Error creating number entity for %s: %s", entity_key, e)
 
+        numbers.extend(
+            XCCDuration(coordinator, key)
+            for key, metadata in coordinator.entities.items()
+            if duration_prop(metadata.get("prop", ""))
+            and metadata.get("descriptor_config", {}).get("time_control")
+        )
         return numbers
 
     # Try to create entities immediately
@@ -87,6 +95,45 @@ async def async_setup_entry(
         # Register the update listener
         coordinator.async_add_listener(_on_coordinator_update)
         _LOGGER.info("📡 Registered listener for future coordinator updates")
+
+
+class XCCDuration(XCCEntity, NumberEntity):
+    """Additive elapsed-time control in minutes, not a time-of-day picker."""
+    _attr_native_min_value = 0
+    _attr_native_max_value = 1439
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = "min"
+    _attr_mode = NumberMode.BOX
+    _attr_icon = "mdi:timer-outline"
+
+    def __init__(self, coordinator, entity_id):
+        super().__init__(coordinator, entity_id)
+        self.entity_id = f"number.{entity_id}_minutes"
+        self._attr_unique_id += "_duration_minutes"
+        self._attr_name = f"{self._attr_name} (minutes)"
+
+    @property
+    def native_value(self):
+        metadata = self.coordinator.get_entity_data(self.entity_id_suffix) or {}
+        return duration_minutes(metadata.get("data", {}).get("state", ""))
+
+    @property
+    def available(self):
+        return self.coordinator.last_update_success and self.native_value is not None
+
+    async def async_set_native_value(self, value):
+        try:
+            encoded = duration_value(value)
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+        if value > self.native_max_value:
+            raise HomeAssistantError("XCC duration exceeds this control's one-day range")
+        try:
+            success = await self.coordinator.async_set_entity_value(self.entity_id_suffix, encoded)
+        except Exception as err:
+            raise HomeAssistantError("Unable to complete the XCC duration change") from err
+        if not success:
+            raise HomeAssistantError("XCC did not confirm the requested duration change")
 
 
 class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
@@ -140,7 +187,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         self._attr_native_min_value = min_val if min_val is not None else -sys.float_info.max
         self._attr_native_max_value = max_val if max_val is not None else sys.float_info.max
         self._attr_native_step = number_step_for_prop(
-            self._prop, self._entity_config.get("step")
+            self._prop, native_number_step(self._prop, self._entity_config, entity_data.get("attributes", {}))
         )
 
         # Log when using unlimited range for debugging
@@ -158,7 +205,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             self._attr_native_unit_of_measurement = unit
 
         # Set mode based on step size
-        if self._attr_native_step >= 1:
+        if self._attr_native_step >= 1 or min_val is None or max_val is None:
             self._attr_mode = NumberMode.BOX
         else:
             self._attr_mode = NumberMode.SLIDER

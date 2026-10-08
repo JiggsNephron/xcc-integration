@@ -31,6 +31,7 @@ PLATFORMS_TO_SETUP = [
     Platform.NUMBER,
     Platform.SELECT,
     Platform.BUTTON,
+    Platform.TIME,
 ]
 
 

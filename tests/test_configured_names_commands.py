@@ -19,7 +19,10 @@ class HomeAssistantError(Exception):
 
 def method(filename, name, **extras):
     tree = ast.parse((ROOT / filename).read_text(encoding="utf-8"))
-    node = next(n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef) and n.name == name)
+    # Multiple number classes now implement the same API. Keep testing the
+    # original platform rather than accidentally extracting the duration API.
+    scope = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "XCCNumber") if filename == "number.py" else tree
+    node = next(n for n in ast.walk(scope) if isinstance(n, ast.AsyncFunctionDef) and n.name == name)
     namespace = {"HomeAssistantError": HomeAssistantError, "_LOGGER": logging.getLogger(__name__), **extras}
     exec(compile(ast.Module(body=[node], type_ignores=[]), filename, "exec"), namespace)
     return namespace[name]

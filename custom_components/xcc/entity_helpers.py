@@ -25,7 +25,7 @@ _REPEATED_UNDERSCORES = re.compile(r"_+")
 
 # Heating-circuit namespacing. Mirrors xcc_client.qualify_circuit_prop, kept
 # local so this module stays dependency-free (see module docstring).
-_OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
+_OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH[12](\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_SCOPED_PROPS = frozenset(
     {
@@ -336,6 +336,8 @@ def _normalize_page_to_device(page: str, prop: str) -> str:
         # group them under the existing FVE device. A bare "FVESOC" key is not in
         # _DEVICE_PRIORITY and its entities would otherwise be silently dropped.
         return "FVE"
+    if re.fullmatch(r"TUV1\d\.XML", page_upper):
+        return "TUV1"
     return (
         page_upper
         .replace("1.XML", "")
@@ -464,6 +466,12 @@ def process_entities(
             descriptor_config = configured_name_config(
                 prop, entity["attributes"].get("page", ""), descriptor_config, name_values
             )
+            # Curve pages share the same circuit identity as group 1.
+            curve_circuit = _OKRUH_DATA_PAGE_RE.fullmatch(page.upper())
+            if curve_circuit and page.upper().startswith("OKRUH2"):
+                descriptor_config = configured_name_config(
+                    prop, f"OKRUH1{curve_circuit.group(1)}.XML", config or {}, name_values
+                )
             friendly_name = _resolve_friendly_name(
                 descriptor_config, prop, language
             )
@@ -480,6 +488,7 @@ def process_entities(
                 "unit": unit,
                 "page": page,
                 "device": device_name,
+                "attributes": entity["attributes"],
             })
 
             entities_metadata[entity_id] = {

@@ -76,6 +76,7 @@ PLATFORMS: Final = [
     "number",
     "select",
     "climate",
+    "time",
 ]
 
 # XCC specific constants

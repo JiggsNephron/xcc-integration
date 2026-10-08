@@ -2,6 +2,36 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.28] - 2026-10-08
+
+### Added
+
+- Native clock controls for weekly zone/DHW attenuation, sanitation start and
+  scheduled DHW temperature raising. Retain the existing read-only sensors and
+  their history; new controls use separate unique IDs.
+- Minute-based duration controls for temporary room-adaptation suspension,
+  maximum DHW heating time and DHW rest time. The first version limits these
+  editors to 0–1439 minutes; it does not claim this is the controller's hardware limit.
+- Per-circuit heating-curve shift and twelve outside/water temperature pairs,
+  with correct group-2 page routing. Floor-curing controls are not added.
+- Separate sanitation Stop action, preserving the existing Run entity and
+  using the descriptor's explicit action values rather than the current state.
+- Discover the descriptor-declared DHW temperature-raising page.
+
+### Fixed
+
+- Respect descriptor digits for numeric increments; infer omitted temperature
+  increments from the native register format. DHW minimum/attenuation and
+  zone hysteresis support 0.1°C, while integer curve points retain whole steps.
+- Use box input when numeric bounds are absent, avoiding an effectively
+  unbounded slider. Preserve declared limits and previous metadata fixes.
+
+## [1.15.27] - 2026-10-01
+
+### Fixed
+
+- Primary room and DHW targets accept 0.1°C changes, matching the controller.
+
 ## [1.15.26] - 2026-09-29
 
 ### Added

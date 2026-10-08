@@ -25,9 +25,11 @@ _PLATFORM_PREFIXES: tuple[str, ...] = (
     "number.xcc_",
     "switch.xcc_",
     "select.xcc_",
+    "time.xcc_",
     "number.",
     "switch.",
     "select.",
+    "time.",
 )
 
 

@@ -47,6 +47,12 @@ The same `tests/` dir is run by both CI jobs. HA-dependent tests guard themselve
 
 ## Conventions
 
+- **Additive native time controls:** `time.py` selects only verified clock
+  fields via `control_helpers.py`, preserving the original sensors. Elapsed
+  durations use additional minute-based number entities, not clock pickers.
+  Curve fields come from OKRUH2&lt;index&gt;.XML; this group is filtered to curves
+  only. TUV13.XML carries DHW temperature raising. See docs/web-control-parity.md.
+
 - **Canonical entity_id is `xcc_<slugified_prop>`.** Every platform forces `self.entity_id` explicitly to avoid HA baking the controller IP into the slug. `format_entity_id_suffix` does the slug but does **not** add the `xcc_` prefix — callers prepend it. Since the prop is the only key, any two pages publishing the same prop collide (see heating circuits above) — namespace at the prop, never at the entity_id.
 - **unique_id is always `f"{ip_address}_{base_entity_id}"`** (namespaces multiple controllers; `async_regenerate_entity_ids` parses it).
 - `_attr_has_entity_name = True` everywhere; `_attr_name` is set to `None` when the feature name equals the device name.

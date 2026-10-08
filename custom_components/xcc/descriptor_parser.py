@@ -90,6 +90,14 @@ class XCCDescriptorParser:
 
                 config = self._determine_entity_config(element, page_name)
                 if config:
+                    if element.tag == "button":
+                        # Same register can have Run/Stop actions. Preserve the
+                        # legacy primary entity while retaining every action.
+                        previous = entity_configs.get(prop, {})
+                        config["button_actions"] = previous.get("button_actions", []) + [{
+                            "value": element.get("value", "1"),
+                            "name": element.get("text_en") or element.get("text", prop),
+                        }]
                     entity_configs[prop] = config
 
         # Also find row elements that might contain sensor descriptions
@@ -469,6 +477,9 @@ class XCCDescriptorParser:
             "page": page_name,
             "writable": is_writable,
         }
+        if element.tag == "time":
+            entity_config["time_control"] = is_writable
+            entity_config["time_max_hours"] = self._get_float_attr(element, "max")
 
         # Consolidated descriptor parsing log
         source_info = []
@@ -510,6 +521,14 @@ class XCCDescriptorParser:
         elif element.tag == "number":
             # Get unit with enhanced detection
             unit = self._resolve_unit(prop, parent_row, element)
+            if re.fullmatch(r"TO-(?:POSUN|EK\d+[01])", prop):
+                unit = "°C"
+                point = re.fullmatch(r"TO-EK(\d+)([01])", prop)
+                if point:
+                    entity_config["friendly_name_en"] = (
+                        f"Heating curve point {int(point.group(1)) + 1} — "
+                        + ("outside temperature" if point.group(2) == "0" else "water temperature")
+                    )
 
             # Determine device class from unit
             device_class = self._determine_device_class_from_unit(unit)
@@ -522,7 +541,8 @@ class XCCDescriptorParser:
                         "data_type": "real",
                         "min": self._get_float_attr(element, "min"),
                         "max": self._get_float_attr(element, "max"),
-                        "step": self._get_float_attr(element, "step", 1.0),
+                        "step": self._get_float_attr(element, "step", 10 ** (-self._get_int_attr(element, "digits", 0))),
+                        "step_explicit": element.get("step") is not None or element.get("digits") is not None,
                         "digits": self._get_int_attr(element, "digits", 1),
                         "unit": unit,
                         "unit_en": unit,
@@ -556,6 +576,7 @@ class XCCDescriptorParser:
                 {
                     "entity_type": "button",
                     "data_type": "action",
+                    "button_value": element.get("value", "1"),
                 },
             )
 

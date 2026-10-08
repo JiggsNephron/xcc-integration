@@ -34,7 +34,7 @@ _auth_locks = {}
 # Circuit 0 keeps its bare names so existing entity_ids/unique_ids (and recorder
 # history) are untouched; every other circuit is namespaced to ``OKRUH<n>-*``.
 # ---------------------------------------------------------------------------
-_OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
+_OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH[12](\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_PROP_PREFIX = "TO-"
 _CIRCUIT_SCOPED_PROPS = frozenset(
@@ -70,9 +70,9 @@ def qualify_page_prop(prop: str, page: str) -> str:
     return qualify_circuit_prop(prop, circuit_from_okruh_page(page))
 
 
-def okruh_data_page(circuit: int) -> str:
+def okruh_data_page(circuit: int, group: int = 1) -> str:
     """Return the data-page filename carrying ``circuit``'s live values."""
-    return f"OKRUH1{circuit}.XML"
+    return f"OKRUH{group}{circuit}.XML"
 
 
 def circuit_from_okruh_page(page: str) -> int | None:
@@ -556,6 +556,18 @@ class XCCClient:
                 uppercase_refs = re.findall(r'[A-Z][A-Z0-9]*\.XML', content)
                 data_pages.extend(uppercase_refs)
 
+                # The temperature-raising block declares TUV13, which guessed
+                # suffixes miss. Do not discover unrelated unvalidated controls.
+                try:
+                    descriptor_root = etree.fromstring(content.encode())
+                    data_pages.extend(
+                        f"{block.get('data')}.XML"
+                        for block in descriptor_root.iter("block")
+                        if block.get("data") == "TUV13"
+                    )
+                except etree.XMLSyntaxError:
+                    pass
+
                 # Pattern 2: Look for specific data page patterns based on descriptor name
                 base_name = desc_page.replace('.xml', '').upper()
 
@@ -671,6 +683,14 @@ class XCCClient:
                     _LOGGER.debug("Circuit data page %s empty or login page", candidate)
                     continue
                 circuit_pages.append(candidate)
+                # Group 2 contains the curve, not another heating circuit.
+                curve_page = okruh_data_page(int(match.group(1)), group=2)
+                try:
+                    curve = await self.fetch_page(curve_page)
+                    if not self._is_login_page(curve) and len(curve) > 100:
+                        circuit_pages.append(curve_page)
+                except Exception as err:
+                    _LOGGER.debug("Curve page %s unavailable: %s", curve_page, err)
                 _LOGGER.info(
                     "Circuit '%s' (%s) is enabled -> %s",
                     info.get('name'), page_url, candidate,
@@ -1028,14 +1048,33 @@ class XCCClient:
             # TO-* name, so unqualify before the NAME lookup below.
             lookup_prop, prop_circuit = unqualify_circuit_prop(prop)
             if prop_circuit is not None:
-                page_to_fetch = okruh_data_page(prop_circuit)
+                group = 2 if re.fullmatch(r"TO-(?:POSUN|EK\d+[01])", lookup_prop.upper()) else 1
+                page_to_fetch = okruh_data_page(prop_circuit, group)
                 prop_upper = lookup_prop.upper()
+
+            # Only the verified weekly attenuation fields are writable PAGE
+            # aliases. Page names/identities remain read-only telemetry.
+            schedule = re.fullmatch(
+                r"PAGE-(OKRUH1\d+|TUV11)-(US-(?:MON|TUE|WED|THU|FRI|SAT|SUN)-T(?:ON|OFF)[12])",
+                prop_upper,
+            )
+            if schedule:
+                page_to_fetch = schedule.group(1) + ".XML"
+                lookup_prop = schedule.group(2)
+            elif prop_upper.startswith("PAGE-"):
+                return False
 
             tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]
             if page_to_fetch is not None:
                 pass
             elif prop_upper.startswith("SYSCONFIG-"):
                 page_to_fetch = "main.xml"
+            elif prop_upper.startswith("TSC-"):
+                page_to_fetch = "TUV11.XML"
+            elif re.fullmatch(r"TO-(?:POSUN|EK\d+[01])", prop_upper):
+                page_to_fetch = "OKRUH20.XML"
+            elif prop_upper.startswith(("TUVTEPLOTYPRIRUCNIMOHREVU-", "TUVTEPLOTYPRICASOVEMSPUSTENI-", "TUVTEPLOTYPRIKTP-", "TUVTPS-")):
+                page_to_fetch = "TUV13.XML"
             elif any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
             elif "SOCCURVE" in prop_upper:
@@ -1146,6 +1185,11 @@ def parse_xml_entities(
         for i, elem in enumerate(input_elements):
             prop = qualify_page_prop(elem.get("P"), page_name)
             value = elem.get("VALUE")
+            # This addition exposes curve editing, not floor-curing controls.
+            if page_name.upper().startswith("OKRUH2"):
+                bare_prop, _ = unqualify_circuit_prop(prop)
+                if not re.fullmatch(r"TO-(?:POSUN|EK\d+[01])", bare_prop or ""):
+                    continue
 
             # Only log first 3 elements once per function call to avoid spam (they're always the same)
             # Use a global variable since this is a standalone function
