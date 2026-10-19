@@ -2,6 +2,15 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.31] - 2026-10-19
+
+### Changed
+
+- Group the three Modbus telemetry sensors under the existing Unit Status
+  connected device, alongside the web-based flow temperature. Preserve sensor
+  unique IDs, entity IDs, units, polling and history. Device grouping works
+  independently of web discovery and respects the configured language.
+
 ## [1.15.30] - 2026-10-19
 
 ### Added

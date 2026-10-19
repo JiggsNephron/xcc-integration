@@ -114,6 +114,9 @@ def env(monkeypatch):
     module("homeassistant.helpers.config_validation", string=str, boolean=bool,
            config_entry_only_config_schema=lambda domain: Mock())
     module("homeassistant.helpers.service", async_register_admin_service=register)
+    module("homeassistant.helpers.device_registry", async_get=lambda hass:
+           types.SimpleNamespace(async_get_device=lambda **kwargs:
+                                 types.SimpleNamespace(id="parent-controller")))
     module("homeassistant.helpers.update_coordinator", DataUpdateCoordinator=Coordinator,
            UpdateFailed=HAError, CoordinatorEntity=CoordinatorEntity)
     class Platform(str, Enum):
@@ -259,7 +262,8 @@ async def test_sensor_ids_units_and_independent_availability(env):
     for desc in mod.SENSORS:
         sensor = mod.XCCModbusSensor(env.coord, desc)
         assert sensor.entity_id == f"sensor.xcc_modbus_{desc.key}"
-        assert sensor._attr_device_info["identifiers"] == {("xcc", "192.0.2.1")}
+        assert sensor._attr_device_info["identifiers"] == {("xcc", "192.0.2.1_STAVJED")}
+        assert sensor._attr_device_info["via_device_id"] == "parent-controller"
         assert sensor.native_value == env.coord.data[desc.key]
         assert sensor.available
     env.coord.last_update_success = False

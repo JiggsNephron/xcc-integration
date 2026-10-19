@@ -18,7 +18,9 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from .const import (
+    CONF_LANGUAGE,
     CONF_MODBUS_SCAN_INTERVAL,
+    DEFAULT_LANGUAGE,
     DEFAULT_MODBUS_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -61,6 +63,7 @@ class XCCModbusCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=max(10, min(3600, int(interval)))),
         )
         self.host = entry.data["ip_address"]
+        self.language = entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
         self._client = AsyncModbusTcpClient(
             self.host, port=502, timeout=3, retries=0, reconnect_delay=0,
         )

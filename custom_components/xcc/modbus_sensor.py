@@ -4,9 +4,10 @@ from homeassistant.components.sensor import (
     SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass,
 )
 from homeassistant.const import UnitOfTemperature, UnitOfVolumeFlowRate
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, LANGUAGE_ENGLISH
 
 SENSORS = (
     SensorEntityDescription(
@@ -40,7 +41,17 @@ class XCCModbusSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.host}_modbus_{description.key}"
         self.entity_id = f"sensor.xcc_modbus_{description.key}"
-        self._attr_device_info = {"identifiers": {(DOMAIN, coordinator.host)}}
+        parent = dr.async_get(coordinator.hass).async_get_device(
+            identifiers={(DOMAIN, coordinator.host)}
+        )
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{coordinator.host}_STAVJED")},
+            "name": "Unit Status" if coordinator.language == LANGUAGE_ENGLISH else "Stav jednotky",
+            "manufacturer": "XCC",
+            "model": "System Status Monitor" if coordinator.language == LANGUAGE_ENGLISH else "Monitor stavu systému",
+        }
+        if parent is not None:
+            self._attr_device_info["via_device_id"] = parent.id
 
     @property
     def native_value(self):
