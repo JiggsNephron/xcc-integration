@@ -33,8 +33,8 @@ Inspired by work in https://github.com/Pdobry/xcc-graph.
 
 ### Optional read-only Modbus telemetry
 
-Version 1.15.30 targets Home Assistant 2026.10 or newer and pins the
-same PyModbus version as that release to avoid conflicting client dependencies.
+Version 1.15.30 targets Home Assistant 2026.10 or newer and uses its compatible
+PyModbus dependency (minimum 3.13.1), allowing Home Assistant to update it.
 Modbus telemetry is **off by default**. Enable it in the XCC integration's
 Configure options (or during initial setup). The polling interval is independent
 of web polling: default 15 seconds, configurable from 10 to 3600 seconds.

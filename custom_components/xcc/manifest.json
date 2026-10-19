@@ -10,7 +10,7 @@
   "issue_tracker": "https://github.com/pvyleta/xcc-integration/issues",
   "loggers": ["xcc_client", "homeassistant.components.xcc"],
   "quality_scale": "silver",
-  "requirements": ["aiohttp>=3.8.0", "lxml>=4.6.0", "aiofiles>=0.8.0", "pymodbus==3.13.1"],
+  "requirements": ["lxml>=4.6.0", "aiofiles>=0.8.0", "pymodbus>=3.13.1"],
   "single_config_entry": false,
   "version": "1.15.30"
 }

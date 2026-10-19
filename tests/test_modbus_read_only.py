@@ -111,7 +111,8 @@ def env(monkeypatch):
     module("homeassistant.core", SupportsResponse=Response, HomeAssistant=object)
     module("homeassistant.exceptions", HomeAssistantError=HAError,
            ServiceValidationError=HAError, ConfigEntryNotReady=HAError)
-    module("homeassistant.helpers.config_validation", string=str, boolean=bool)
+    module("homeassistant.helpers.config_validation", string=str, boolean=bool,
+           config_entry_only_config_schema=lambda domain: Mock())
     module("homeassistant.helpers.service", async_register_admin_service=register)
     module("homeassistant.helpers.update_coordinator", DataUpdateCoordinator=Coordinator,
            UpdateFailed=HAError, CoordinatorEntity=CoordinatorEntity)

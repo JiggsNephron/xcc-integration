@@ -51,7 +51,7 @@
           "scan_interval": "How often to update data from the controller in seconds (10-3600, default: 120)",
           "modbus_enabled": "Uses the controller IP, TCP port 502 and unit 1. Stop any other Modbus client for this controller before enabling.",
           "modbus_scan_interval": "Independent of web polling. Range 10-3600 seconds; default 15.",
-          "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_<name> form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards. Warning: recorder history is keyed by entity_id, so renamed entities start with fresh history."
+          "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_name form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards. Warning: recorder history is keyed by entity_id, so renamed entities start with fresh history."
         }
       }
     }
