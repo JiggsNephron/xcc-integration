@@ -57,6 +57,48 @@ def test_descriptor_and_data_pipeline():
     assert metadata["xcc_h4"]["prop"] == "H4"
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+def test_zone_names_do_not_leak_from_previous_curve_page(reverse):
+    """Every status/curve entity must use its own page's circuit identity."""
+    configs = {
+        "BLOKYSPOTREBY-OK": {
+            "entity_type": "binary_sensor", "friendly_name_en": "HP heating circuit",
+        },
+        "TO-KONSTANTA": {
+            "entity_type": "number", "friendly_name_en": "Curve constant",
+        },
+    }
+    pages = [
+        ("OKRUH20.XML", "TO-KONSTANTA", "30"),
+        ("OKRUH11.XML", "OKRUH1-BLOKYSPOTREBY-OK", "1"),
+        ("OKRUH21.XML", "OKRUH1-KONSTANTA", "32"),
+        ("OKRUH10.XML", "BLOKYSPOTREBY-OK", "0"),
+    ]
+    if reverse:
+        pages.reverse()
+    raw = [
+        {"state": value, "attributes": {"field_name": prop, "page": page, "value": value}}
+        for page, prop, value in pages
+    ]
+    raw.extend([
+        {"state": name, "attributes": {
+            "field_name": f"PAGE-OKRUH1{index}-PAGENAME", "page": f"OKRUH1{index}.XML",
+            "value": name,
+        }}
+        for index, name in enumerate(("Downstairs", "Upstairs"))
+    ])
+    processed, metadata = helpers.process_entities(raw, configs, language="english")
+    for key, name, page, prop, bucket in [
+        ("xcc_blokyspotreby_ok", "Downstairs — HP heating circuit", "OKRUH10.XML", "BLOKYSPOTREBY-OK", "binary_sensors"),
+        ("xcc_okruh1_blokyspotreby_ok", "Upstairs — HP heating circuit", "OKRUH11.XML", "OKRUH1-BLOKYSPOTREBY-OK", "binary_sensors"),
+        ("xcc_to_konstanta", "Downstairs — Curve constant", "OKRUH20.XML", "TO-KONSTANTA", "numbers"),
+        ("xcc_okruh1_konstanta", "Upstairs — Curve constant", "OKRUH21.XML", "OKRUH1-KONSTANTA", "numbers"),
+    ]:
+        assert processed[bucket][key]["name"] == name
+        assert metadata[key]["page"] == page
+        assert metadata[key]["prop"] == prop
+
+
 @pytest.mark.parametrize("existing,expected", [(None, False), ("My custom label", False), ("Old generated", True)])
 def test_registry_custom_names_preserved(existing, expected):
     registry = SimpleNamespace(async_get=Mock(return_value=SimpleNamespace(name=existing)), async_update_entity=Mock())

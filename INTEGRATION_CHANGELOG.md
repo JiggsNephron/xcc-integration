@@ -2,6 +2,14 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.32] - 2026-10-19
+
+### Fixed
+
+- Resolve each heating-circuit entity's configured name using its own data page,
+  not the previously processed page. Prevent swapped Upstairs/Downstairs status
+  labels and incorrect curve labels without changing entity IDs or command routing.
+
 ## [1.15.31] - 2026-10-19
 
 ### Changed

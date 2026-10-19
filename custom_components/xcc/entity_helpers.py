@@ -428,6 +428,7 @@ def process_entities(
             continue
         for entity in entities_by_page[device_name]:
             prop = entity["attributes"]["field_name"]
+            page = entity["attributes"].get("page", "unknown")
             if prop in assigned_entities:
                 continue
             assigned_entities.add(prop)
@@ -464,7 +465,7 @@ def process_entities(
                 }
 
             descriptor_config = configured_name_config(
-                prop, entity["attributes"].get("page", ""), descriptor_config, name_values
+                prop, page, descriptor_config, name_values
             )
             # Curve pages share the same circuit identity as group 1.
             curve_circuit = _OKRUH_DATA_PAGE_RE.fullmatch(page.upper())
@@ -477,7 +478,6 @@ def process_entities(
             )
             unit = descriptor_config.get("unit", entity["attributes"].get("unit", ""))
             entity_id = f"xcc_{format_entity_id_suffix(prop)}"
-            page = entity["attributes"].get("page", "unknown")
 
             entities_list.append({
                 "entity_id": entity_id,
