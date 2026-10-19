@@ -21,9 +21,12 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import (
     CONF_ENTITY_TYPE,
     CONF_LANGUAGE,
+    CONF_MODBUS_ENABLED,
+    CONF_MODBUS_SCAN_INTERVAL,
     CONF_REGENERATE_ENTITY_IDS,
     CONF_SCAN_INTERVAL,
     DEFAULT_LANGUAGE,
+    DEFAULT_MODBUS_SCAN_INTERVAL,
     DEFAULT_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
@@ -54,6 +57,9 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         # therefore the recorder history attached to those entity_id strings).
         # Tick to rewrite legacy IP-baked ids to the canonical ``xcc_*`` form.
         vol.Optional(CONF_REGENERATE_ENTITY_IDS, default=False): bool,
+        vol.Optional(CONF_MODBUS_ENABLED, default=False): bool,
+        vol.Optional(CONF_MODBUS_SCAN_INTERVAL, default=DEFAULT_MODBUS_SCAN_INTERVAL):
+            vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
     },
 )
 
@@ -159,16 +165,11 @@ class XCCOptionsFlowHandler(OptionsFlow):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Show the single options step.
-
-        The only option today is ``regenerate_entity_ids``: when submitted as
-        true, ``async_setup_entry`` will sweep the entity registry on the next
-        reload, rename legacy IP-baked ids to the canonical ``xcc_<suffix>``
-        form, and drop any stale duplicates. The flag is cleared after the
-        sweep so it behaves as a one-shot trigger.
-        """
+        """Configure web polling and optional independent Modbus telemetry."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(
+                title="", data={**self.config_entry.options, **user_input}
+            )
 
         current_scan = self.config_entry.options.get(
             CONF_SCAN_INTERVAL,
@@ -181,6 +182,13 @@ class XCCOptionsFlowHandler(OptionsFlow):
                     vol.Range(min=10, max=3600),
                 ),
                 vol.Optional(CONF_REGENERATE_ENTITY_IDS, default=False): bool,
+                vol.Optional(CONF_MODBUS_ENABLED, default=self.config_entry.options.get(
+                    CONF_MODBUS_ENABLED, self.config_entry.data.get(CONF_MODBUS_ENABLED, False)
+                )): bool,
+                vol.Optional(CONF_MODBUS_SCAN_INTERVAL, default=self.config_entry.options.get(
+                    CONF_MODBUS_SCAN_INTERVAL,
+                    self.config_entry.data.get(CONF_MODBUS_SCAN_INTERVAL, DEFAULT_MODBUS_SCAN_INTERVAL),
+                )): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

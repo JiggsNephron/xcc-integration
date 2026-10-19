@@ -11,7 +11,9 @@
           "scan_interval": "Scan Interval (seconds)",
           "language": "Language",
           "entity_type": "Entity Type",
-          "regenerate_entity_ids": "Regenerate entity IDs (discard existing)"
+          "regenerate_entity_ids": "Regenerate entity IDs (discard existing)",
+          "modbus_enabled": "Enable read-only Modbus telemetry",
+          "modbus_scan_interval": "Modbus polling interval (seconds)"
         },
         "data_description": {
           "ip_address": "The IP address of your XCC controller",
@@ -41,10 +43,14 @@
         "description": "Configure advanced options for your XCC controller",
         "data": {
           "scan_interval": "Scan Interval (seconds)",
-          "regenerate_entity_ids": "Regenerate entity IDs on next reload"
+          "regenerate_entity_ids": "Regenerate entity IDs on next reload",
+          "modbus_enabled": "Enable read-only Modbus telemetry",
+          "modbus_scan_interval": "Modbus polling interval (seconds)"
         },
         "data_description": {
           "scan_interval": "How often to update data from the controller in seconds (10-3600, default: 120)",
+          "modbus_enabled": "Uses the controller IP, TCP port 502 and unit 1. Stop any other Modbus client for this controller before enabling.",
+          "modbus_scan_interval": "Independent of web polling. Range 10-3600 seconds; default 15.",
           "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_<name> form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards. Warning: recorder history is keyed by entity_id, so renamed entities start with fresh history."
         }
       }

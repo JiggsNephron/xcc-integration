@@ -32,6 +32,9 @@ CONF_SCAN_INTERVAL: Final = "scan_interval"
 CONF_ENTITY_TYPE: Final = "entity_type"
 CONF_LANGUAGE: Final = "language"
 CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
+CONF_MODBUS_ENABLED: Final = "modbus_enabled"
+CONF_MODBUS_SCAN_INTERVAL: Final = "modbus_scan_interval"
+DEFAULT_MODBUS_SCAN_INTERVAL: Final = 15
 
 # Default values
 DEFAULT_USERNAME: Final = "xcc"

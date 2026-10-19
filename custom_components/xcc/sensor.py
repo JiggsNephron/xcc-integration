@@ -84,6 +84,28 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up XCC sensor entities from a config entry."""
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    if coordinator.modbus_coordinator is not None:
+        from .modbus_sensor import SENSORS, XCCModbusSensor
+
+        async_add_entities([
+            XCCModbusSensor(coordinator.modbus_coordinator, description)
+            for description in SENSORS
+        ])
+
+    async def add_web_sensors():
+        if getattr(coordinator, "web_sensors_added", False):
+            return
+        await async_setup_web_sensors(hass, config_entry, async_add_entities)
+        coordinator.web_sensors_added = True
+
+    coordinator.async_add_web_sensors = add_web_sensors
+    if coordinator.web_ready:
+        await add_web_sensors()
+
+
+async def async_setup_web_sensors(hass, config_entry, async_add_entities):
+    """Discover web sensors now, or after an independently retried web startup."""
     _LOGGER.info("Setting up XCC sensor platform")
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 

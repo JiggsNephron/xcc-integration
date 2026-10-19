@@ -56,13 +56,16 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.language = entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
 
         # Set update interval from config or default
-        scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        scan_interval = entry.options.get(
+            CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
         update_interval = timedelta(seconds=scan_interval)
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
+            config_entry=entry,
             update_interval=update_interval,
         )
 
@@ -74,6 +77,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.entity_configs = {}  # Cached entity configurations
         self._descriptors_loaded = False  # Track if descriptors have been loaded
         self.system_faults = FaultTracker()
+        self.modbus_coordinator = None
+        self.web_ready = False
+        self.loaded_platforms = []
+        self.async_add_web_sensors = None
 
         # One-shot flag set by ``async_setup_entry`` when the user opted in
         # to entity-ID regeneration. ``XCCEntity._migrate_legacy_entity_id``
@@ -633,6 +640,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_shutdown(self) -> None:
         """Shutdown the coordinator and clean up resources."""
+        await super().async_shutdown()
         if self._client is not None:
             _LOGGER.debug("Closing persistent XCC client for %s", self.ip_address)
             try:

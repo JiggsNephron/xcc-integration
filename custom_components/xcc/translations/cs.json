@@ -10,7 +10,9 @@
           "password": "Heslo",
           "scan_interval": "Interval skenování (sekundy)",
           "language": "Jazyk",
-          "regenerate_entity_ids": "Přegenerovat ID entit (zahodit stávající)"
+          "regenerate_entity_ids": "Přegenerovat ID entit (zahodit stávající)",
+          "modbus_enabled": "Povolit telemetrii Modbus pouze pro čtení",
+          "modbus_scan_interval": "Interval čtení Modbus (sekundy)"
         },
         "data_description": {
           "ip_address": "IP adresa vašeho XCC regulátoru",
@@ -39,7 +41,9 @@
         "description": "Nakonfigurujte pokročilé možnosti pro váš XCC regulátor",
         "data": {
           "scan_interval": "Interval skenování (sekundy)",
-          "regenerate_entity_ids": "Přegenerovat ID entit při příštím načtení"
+          "regenerate_entity_ids": "Přegenerovat ID entit při příštím načtení",
+          "modbus_enabled": "Povolit telemetrii Modbus pouze pro čtení",
+          "modbus_scan_interval": "Interval čtení Modbus (sekundy)"
         },
         "data_description": {
           "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)",

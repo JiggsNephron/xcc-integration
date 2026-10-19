@@ -10,6 +10,8 @@ pytest-mock>=3.10.0
 # XCC integration dependencies
 aiohttp>=3.8.0
 lxml>=4.6.0
+voluptuous>=0.15.0
+pymodbus==3.13.1
 
 # Code quality tools
 ruff>=0.1.0

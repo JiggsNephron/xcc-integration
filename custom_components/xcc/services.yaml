@@ -1,0 +1,50 @@
+read_modbus:
+  name: Read Modbus registers
+  description: Read-only diagnostics through the existing Modbus connection. Administrator access required. Addresses are zero-based. Does not create entities or write to the controller.
+  fields:
+    entry_id:
+      name: XCC integration
+      required: true
+      selector:
+        config_entry:
+          integration: xcc
+    address:
+      name: Register address
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    count:
+      name: Number of values
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 32
+          mode: box
+    register_type:
+      name: Register type
+      default: holding
+      selector:
+        select:
+          options:
+            - holding
+            - input
+            - coil
+            - discrete_input
+    signed:
+      name: Decode as signed 16-bit
+      default: false
+      selector:
+        boolean:
+    scale:
+      name: Scale divisor
+      description: For XCC temperatures use 100, with signed decoding enabled.
+      default: 1
+      selector:
+        number:
+          min: 0.000001
+          max: 1000000
+          mode: box

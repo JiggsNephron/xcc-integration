@@ -12,6 +12,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_ENTITY_TYPE,
+    CONF_MODBUS_ENABLED,
     CONF_REGENERATE_ENTITY_IDS,
     DEFAULT_ENTITY_TYPE,
     DOMAIN,
@@ -35,6 +36,14 @@ PLATFORMS_TO_SETUP = [
 ]
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Register the read-only diagnostic action once for the integration."""
+    from .modbus import async_register_diagnostics
+
+    async_register_diagnostics(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up XCC Heat Pump Controller from a config entry."""
     # Log integration version for debugging
@@ -54,42 +63,60 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    if entry.options.get(CONF_MODBUS_ENABLED, entry.data.get(CONF_MODBUS_ENABLED, False)):
+        from .modbus import XCCModbusCoordinator
+
+        coordinator.modbus_coordinator = XCCModbusCoordinator(hass, entry)
+        # A failed Modbus refresh must not prevent the web side from loading.
+        await coordinator.modbus_coordinator.async_refresh()
+
     # Fetch initial data BEFORE setting up platforms
     # This ensures data is available when entities are created
-    # If this fails, we raise ConfigEntryNotReady to retry later
+    # With Modbus enabled, failed web discovery is retried independently.
     try:
         _LOGGER.debug("Performing initial data fetch before platform setup")
-        await coordinator.async_config_entry_first_refresh()
+        await asyncio.wait_for(
+            coordinator.async_config_entry_first_refresh(),
+            timeout=60 if coordinator.modbus_coordinator is not None else None,
+        )
+        coordinator.web_ready = True
         _LOGGER.info("✅ Initial data fetch successful")
-    except asyncio.TimeoutError as err:
-        _LOGGER.error("Timeout during initial data fetch: %s", err)
-        # Clean up coordinator from hass data
+    except asyncio.CancelledError:
+        await coordinator.async_shutdown()
+        if coordinator.modbus_coordinator is not None:
+            await coordinator.modbus_coordinator.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id)
-        raise ConfigEntryNotReady(f"Timeout fetching initial data: {err}") from err
-    except asyncio.CancelledError as err:
-        _LOGGER.error("Request cancelled during initial data fetch: %s", err)
-        # Clean up coordinator from hass data
-        hass.data[DOMAIN].pop(entry.entry_id)
-        raise ConfigEntryNotReady(f"Request cancelled during initial data fetch: {err}") from err
+        raise
     except Exception as err:
-        _LOGGER.error("Error during initial data fetch: %s", err)
-        # Clean up coordinator from hass data
-        hass.data[DOMAIN].pop(entry.entry_id)
-        raise ConfigEntryNotReady(f"Error fetching initial data: {err}") from err
+        if coordinator.modbus_coordinator is None:
+            await coordinator.async_shutdown()
+            hass.data[DOMAIN].pop(entry.entry_id)
+            raise ConfigEntryNotReady(f"Error fetching initial data: {err}") from err
+        _LOGGER.warning("Web startup unavailable; keeping Modbus independent: %s", err)
+        coordinator.data = {}
+        coordinator.last_update_success = False
+
+    device_info = coordinator.device_info or {
+        "identifiers": {(DOMAIN, coordinator.ip_address)},
+        "name": f"XCC Controller ({coordinator.ip_address})",
+        "manufacturer": "XCC",
+        "model": "Heat Pump Controller",
+        "configuration_url": f"http://{coordinator.ip_address}",
+    }
 
     # Register the main XCC controller device BEFORE setting up platforms
     # This ensures the device exists when sub-devices try to reference it via via_device
     device_registry = dr.async_get(hass)
-    if coordinator.device_info:
+    if device_info:
         _LOGGER.debug("Registering main XCC controller device in device registry")
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
-            identifiers=coordinator.device_info["identifiers"],
-            name=coordinator.device_info["name"],
-            manufacturer=coordinator.device_info["manufacturer"],
-            model=coordinator.device_info["model"],
-            sw_version=coordinator.device_info.get("sw_version"),
-            configuration_url=coordinator.device_info.get("configuration_url"),
+            identifiers=device_info["identifiers"],
+            name=device_info["name"],
+            manufacturer=device_info["manufacturer"],
+            model=device_info["model"],
+            sw_version=device_info.get("sw_version"),
+            configuration_url=device_info.get("configuration_url"),
         )
         _LOGGER.info("✅ Main XCC controller device registered")
     else:
@@ -138,14 +165,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     # Set up integration platforms (sensors, binary_sensors, etc.)
-    # Only do this AFTER we have successfully fetched initial data AND registered the main device
+    # Web platforms need discovered metadata; Modbus sensors do not.
     _LOGGER.debug("Setting up integration entities")
     _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
+    platforms = PLATFORMS_TO_SETUP if coordinator.web_ready else [Platform.SENSOR]
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    coordinator.loaded_platforms.extend(platforms)
+    if not coordinator.web_ready:
+        entry.async_create_background_task(
+            hass, _async_retry_web_setup(hass, entry, coordinator),
+            name=f"XCC web startup retry {entry.entry_id}",
+        )
 
     _LOGGER.info("✅ XCC integration setup complete for %s", entry.data.get("ip_address"))
 
     return True
+
+
+async def _async_retry_web_setup(hass, entry, coordinator):
+    """Recover web entities without reloading or interrupting Modbus sensors."""
+    while not coordinator.web_ready:
+        await asyncio.sleep(30)
+        try:
+            await asyncio.wait_for(coordinator.async_refresh(), timeout=60)
+            if not coordinator.last_update_success:
+                continue
+            await coordinator.async_add_web_sensors()
+            for platform in PLATFORMS_TO_SETUP:
+                if platform not in coordinator.loaded_platforms:
+                    await hass.config_entries.async_forward_entry_setups(entry, [platform])
+                    coordinator.loaded_platforms.append(platform)
+            coordinator.web_ready = True
+        except Exception:
+            _LOGGER.exception("XCC web startup retry failed; Modbus remains independent")
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -166,11 +218,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Unload integration platforms
     _LOGGER.debug("Unloading integration entities")
     unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS_TO_SETUP
+        entry, coordinator.loaded_platforms
     )
+
+    if not unload_ok:
+        return False
 
     # Clean up coordinator resources
     try:
+        if coordinator.modbus_coordinator is not None:
+            await coordinator.modbus_coordinator.async_shutdown()
         await coordinator.async_shutdown()
     except Exception as err:
         _LOGGER.error("Error shutting down coordinator: %s", err)

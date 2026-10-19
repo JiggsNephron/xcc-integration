@@ -2,6 +2,26 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.30] - 2026-10-19
+
+### Added
+
+- Optional read-only Modbus telemetry: flow temperature, return temperature and
+  water flow rate. Disabled by default; polling interval configurable from 10
+  to 3600 seconds (default 15). Uses the controller IP and fixed TCP port 502.
+- Independent web and Modbus polling and availability, including recovery when
+  the web interface is unavailable at startup.
+- Admin-only `xcc.read_modbus` diagnostic action, sharing the existing connection
+  and restricted to bounded read operations. No Modbus writes are exposed.
+- Documented migration from temporary YAML probes while retaining entity IDs,
+  history and statistics; never run both connections simultaneously.
+
+### Changed
+
+- Requires Home Assistant 2026.10 or newer and matches its PyModbus dependency.
+- Preserve unrelated options when updating configuration and respect the
+  configured web polling interval in options.
+
 ## [1.15.29] - 2026-10-08
 
 Version 1.15.28 was not released: full HA CI caught an outdated curve-point

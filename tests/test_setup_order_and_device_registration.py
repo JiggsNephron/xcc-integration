@@ -36,7 +36,8 @@ def test_timeout_handling():
         content = f.read()
     
     # Check for proper exception handling
-    assert "asyncio.TimeoutError" in content, "TimeoutError handling missing"
+    assert "asyncio.wait_for" in content and "timeout=60" in content, \
+        "Initial web fetch must have an explicit bounded timeout"
     assert "asyncio.CancelledError" in content, "CancelledError handling missing"
     assert "ConfigEntryNotReady" in content, "ConfigEntryNotReady not raised"
     

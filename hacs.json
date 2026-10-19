@@ -2,6 +2,6 @@
   "name": "AC Heating XCC Heat Pump Controller",
   "content_in_root": false,
   "country": ["CZ", "SK"],
-  "homeassistant": "2024.1.0",
+  "homeassistant": "2026.10.0",
   "render_readme": true
 }
