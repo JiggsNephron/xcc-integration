@@ -266,7 +266,11 @@ async def test_sensor_ids_units_and_independent_availability(env):
     assert not sensor.available
 
 
-async def test_real_pymodbus_against_loopback_simulator(env):
+async def test_real_pymodbus_against_loopback_simulator(env, request):
+    # HA's test plugin blocks all sockets unless explicitly enabled. Retain
+    # its loopback-only destination restriction; never contact a controller.
+    if importlib.util.find_spec("pytest_socket") is not None:
+        request.getfixturevalue("socket_enabled")
     from pymodbus.client import AsyncModbusTcpClient
     requests = []
     async def serve(reader, writer):
