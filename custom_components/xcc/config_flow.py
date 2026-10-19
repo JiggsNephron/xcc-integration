@@ -159,7 +159,7 @@ class XCCOptionsFlowHandler(OptionsFlow):
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Store the config entry for option lookups."""
-        self.config_entry = config_entry
+        self._entry = config_entry
 
     async def async_step_init(
         self,
@@ -168,12 +168,12 @@ class XCCOptionsFlowHandler(OptionsFlow):
         """Configure web polling and optional independent Modbus telemetry."""
         if user_input is not None:
             return self.async_create_entry(
-                title="", data={**self.config_entry.options, **user_input}
+                title="", data={**self._entry.options, **user_input}
             )
 
-        current_scan = self.config_entry.options.get(
+        current_scan = self._entry.options.get(
             CONF_SCAN_INTERVAL,
-            self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+            self._entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
         )
         schema = vol.Schema(
             {
@@ -182,12 +182,12 @@ class XCCOptionsFlowHandler(OptionsFlow):
                     vol.Range(min=10, max=3600),
                 ),
                 vol.Optional(CONF_REGENERATE_ENTITY_IDS, default=False): bool,
-                vol.Optional(CONF_MODBUS_ENABLED, default=self.config_entry.options.get(
-                    CONF_MODBUS_ENABLED, self.config_entry.data.get(CONF_MODBUS_ENABLED, False)
+                vol.Optional(CONF_MODBUS_ENABLED, default=self._entry.options.get(
+                    CONF_MODBUS_ENABLED, self._entry.data.get(CONF_MODBUS_ENABLED, False)
                 )): bool,
-                vol.Optional(CONF_MODBUS_SCAN_INTERVAL, default=self.config_entry.options.get(
+                vol.Optional(CONF_MODBUS_SCAN_INTERVAL, default=self._entry.options.get(
                     CONF_MODBUS_SCAN_INTERVAL,
-                    self.config_entry.data.get(CONF_MODBUS_SCAN_INTERVAL, DEFAULT_MODBUS_SCAN_INTERVAL),
+                    self._entry.data.get(CONF_MODBUS_SCAN_INTERVAL, DEFAULT_MODBUS_SCAN_INTERVAL),
                 )): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
             }
         )
