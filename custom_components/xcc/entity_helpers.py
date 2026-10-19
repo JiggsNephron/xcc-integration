@@ -307,6 +307,34 @@ def _resolve_friendly_name(
     return name
 
 
+def entity_device_key(metadata: dict[str, Any]) -> str | None:
+    """Choose display ownership without changing the source page or write route.
+
+    Shared controller fields occur on many pages. Discovery priority determines
+    which copy supplies the value, but must not determine its logical device.
+    Keep unknown/advanced fields in their existing group rather than guessing.
+    None explicitly selects the parent controller device.
+    """
+    prop = metadata.get("prop", "").upper()
+    if prop in {"SVENKU", "SNAZEV1", "SNAZEV2", "SCAS", "SCHYBA", "VERZE"}:
+        return None
+    if prop.startswith(("SPOTOVECENY", "WEB-SPOTOVEFUNKCE")):
+        return "SPOT"
+    if re.fullmatch(r"TOPNEOKRUHYIN\d+-CONFIG-NAZEV", prop):
+        # Block names are shared by auxiliary-source and consumer pages. They
+        # include DHW/pools, so do not assume every block is a heating circuit.
+        return "NAST"
+    if prop == "REVERZACESTART" or re.fullmatch(r"REVERZACEPOZADAVEK\d+", prop):
+        return "STAVJED"
+    schedule = re.fullmatch(
+        r"PAGE-(OKRUH1\d+|TUV11)-US-(MON|TUE|WED|THU|FRI|SAT|SUN)-T(ON|OFF)[12]",
+        prop,
+    )
+    if schedule:
+        return "OKRUH" if schedule.group(1).startswith("OKRUH") else "TUV1"
+    return metadata.get("device")
+
+
 def _normalize_page_to_device(page: str, prop: str) -> str:
     """Map a raw XCC page name onto a logical device key."""
     page_upper = page.upper()

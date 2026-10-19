@@ -2,6 +2,19 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.33] - 2026-10-19
+
+### Fixed
+
+- Assign shared controller readings to the main controller, global spot-price
+  fields to Spot Prices, block-name readings to Heat Pump Settings, and native
+  attenuation schedules to their heating-circuit/DHW device. Resolve display
+  ownership separately from discovery/source pages so entity IDs, values and
+  command routing remain unchanged. Retain unknown advanced fields in their
+  existing group rather than guessing.
+- Rename the BIV group from Heat Pump to Heating Auxiliary Source; place its
+  heat-pump reversing controls under Unit Status instead of the auxiliary source.
+
 ## [1.15.32] - 2026-10-19
 
 ### Fixed

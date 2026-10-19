@@ -28,6 +28,7 @@ from .const import (
     XCC_DESCRIPTOR_PAGES,
 )
 from .entity_helpers import (
+    entity_device_key,
     format_entity_id_suffix,
     infer_entity_type_from_attributes,
     lookup_with_normalized_fallback,
@@ -457,7 +458,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
                 "FVEINV": {"name": "PV Inverter", "model": "Solar Inverter Monitor"},
                 "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
-                "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
+                "BIV": {"name": "Heating Auxiliary Source", "model": "Space Heating Auxiliary Source"},
                 "BIVTUV": {"name": "DHW Bivalent Source", "model": "External DHW Heater"},
                 "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
                 "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
@@ -479,7 +480,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "SPOT": {"name": "Spotové ceny", "model": "Data energetického trhu"},
                 "FVEINV": {"name": "FV Měnič", "model": "Monitor solárního měniče"},
                 "FVE": {"name": "Fotovoltaický systém", "model": "Fotovoltaický regulátor"},
-                "BIV": {"name": "Tepelné čerpadlo", "model": "Bivalentní tepelné čerpadlo"},
+                "BIV": {"name": "Bivalentní zdroj vytápění", "model": "Bivalentní zdroj vytápění"},
                 "BIVTUV": {"name": "Bivalentní zdroj TUV", "model": "Externí ohřev TUV"},
                 "OKRUH": {"name": "Topné okruhy", "model": "Regulátor topných zón"},
                 "TUV1": {"name": "Systém teplé vody", "model": "Teplá užitková voda"},
@@ -519,7 +520,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Fallback to main device
             return self.device_info
 
-        device_name = entity_data.get("device")
+        device_name = entity_device_key(entity_data)
         if device_name and hasattr(self, 'sub_device_info') and device_name in self.sub_device_info:
             return self.sub_device_info[device_name]
 
