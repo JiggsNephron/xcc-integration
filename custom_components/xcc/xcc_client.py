@@ -37,6 +37,14 @@ _auth_locks = {}
 _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH[12](\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_PROP_PREFIX = "TO-"
+# Verified against upstream's simultaneous three-circuit capture. Everything
+# else on a circuit page is local, including future fields not in our old list.
+CIRCUIT_GLOBAL_PROPS = frozenset({
+    "CELKOVEPRAZDNINY", "FVE-CONFIG-ENABLED", "FVE-CONFIG-SCHOVATPRETAPENI",
+    "SCAS", "SCHYBA", "SCOMPACT", "SNAZEV1", "SNAZEV2",
+    "SPOTOVECENY-DSMODE", "SVENKU", "SZAPNUTO", "VARIANTAMETEO",
+    "WEB-OKRUHYODKAZPOCASI",
+})
 _CIRCUIT_SCOPED_PROPS = frozenset(
     {
         "BLOKYSPOTREBY-OK",
@@ -84,22 +92,20 @@ def circuit_from_okruh_page(page: str) -> int | None:
 def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
     """Namespace a circuit-scoped prop for circuits above 0.
 
-    Besides ``TO-*``, each okruh page publishes its own consumption-block
-    active flag, requested-water temperature and attenuation flag under the
-    same three ``BLOKYSPOTREBY-*`` names, plus weather and room influence
-    diagnostics. Their controller register addresses
-    differ by circuit, so they must be namespaced too. Other props on an okruh
-    page (SVENKU, FVE-*, ...) remain global duplicates and keep their names.
+    All fields except the verified system-wide register whitelist are local.
+    Existing TO-* identities retain their historical prefix-stripped form.
+    qualify_page_prop handles our existing PAGE-* identity/schedule aliases
+    first so native time controls and recorder history remain unchanged.
     """
     if not circuit or not prop:
         return prop
     prop_upper = prop.upper()
     if prop_upper.startswith(_CIRCUIT_PROP_PREFIX):
         suffix = prop[len(_CIRCUIT_PROP_PREFIX):]
-    elif prop_upper in _CIRCUIT_SCOPED_PROPS:
-        suffix = prop
-    else:
+    elif prop_upper in CIRCUIT_GLOBAL_PROPS:
         return prop
+    else:
+        suffix = prop
     return f"OKRUH{circuit}-{suffix}"
 
 
@@ -116,6 +122,24 @@ def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
     if suffix in _CIRCUIT_SCOPED_PROPS:
         return suffix, int(match.group(1))
     return f"{_CIRCUIT_PROP_PREFIX}{suffix}", int(match.group(1))
+
+
+def circuit_prop_candidates(prop: str) -> tuple[str, ...]:
+    """Resolve either native spelling without guessing its register or page.
+
+    Keep the old single-base helper for curve filtering and existing callers;
+    descriptor and write lookups must accept newly namespaced bare fields too.
+    """
+    base, circuit = unqualify_circuit_prop(prop)
+    if circuit is None:
+        return (base,)
+    suffix = _OKRUH_PROP_RE.fullmatch(prop.upper()).group(2)
+    return tuple(dict.fromkeys((base, f"TO-{suffix}", suffix)))
+
+
+def ordered_unique_pages(pages: list[str]) -> list[str]:
+    """Pin duplicate ownership across restarts instead of hash/set order."""
+    return sorted(set(pages))
 
 
 class XCCClient:
@@ -592,7 +616,7 @@ class XCCClient:
                             pass
 
                 # Remove duplicates and filter valid pages
-                unique_pages = list(set(data_pages))
+                unique_pages = ordered_unique_pages(data_pages)
                 valid_pages = []
 
                 for page in unique_pages:
@@ -703,7 +727,7 @@ class XCCClient:
                 data_pages.extend(circuit_pages)
 
             # Remove duplicates
-            data_pages = list(set(data_pages))
+            data_pages = ordered_unique_pages(data_pages)
 
             _LOGGER.info(
                 "Auto-discovery complete: %d descriptor pages, %d data pages",
@@ -1099,7 +1123,10 @@ class XCCClient:
             if not internal_name:
                 page_content = await self.fetch_page(page_to_fetch)
                 name_mapping = self._extract_name_mapping_from_xml(page_content)
-                internal_name = name_mapping.get(lookup_prop)
+                candidates = (lookup_prop,) if schedule else circuit_prop_candidates(prop)
+                internal_name = next(
+                    (name_mapping[p] for p in candidates if p in name_mapping), None
+                )
 
             if not internal_name:
                 _LOGGER.error("❌ Could not find internal NAME for property %s in %s", prop, page_to_fetch)

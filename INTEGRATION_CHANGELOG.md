@@ -2,6 +2,29 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.1.post1] - 2026-11-21
+
+### Upstream compatibility backport
+
+- Incorporate the useful guarantees from upstream 1.15.18, 1.16.0 and 1.16.1:
+  deterministic page ordering; isolation of every circuit-local field except
+  the verified system-wide register whitelist; descriptor/type inheritance
+  for both native field spellings; and correctly qualified circuit names.
+- Keep this fork's established PAGE-* schedule/identity entities, native time
+  controls, group-2 heating-curve routing, configured Upstairs/Downstairs
+  names, read-only status overrides and all other 1.15.33 custom features.
+  No entity-registry migration or controller-setting write is performed.
+- Include upstream's simultaneous three-circuit fixtures and encoding-aware
+  sample loader, plus fork compatibility regression coverage.
+
+### Fork version convention
+
+- Releases now use `<upstream baseline>.post<N>`: 1.16.1.post1 is the first
+  combined fork release based on upstream 1.16.1. Increment post<N> for fork
+  changes; move the baseline only when incorporating a newer upstream release.
+  This avoids claiming upstream's future numbered releases. Earlier fork
+  release tags remain unchanged, including the independently used v1.15.18.
+
 ## [1.15.33] - 2026-10-19
 
 ### Fixed

@@ -4,6 +4,22 @@ Home Assistant integration for AC Heating XCC heat pump controllers with photovo
 
 Inspired by work in https://github.com/Pdobry/xcc-graph.
 
+## This combined fork
+
+Install **JiggsNephron/xcc-integration** for this fork, not the original
+pvyleta repository. Both use the `xcc` integration domain and installation
+directory; they are alternatives, not two integrations to install together.
+An old Marketplace/HACS record for the original repository may retain its old
+version even while this fork's code is installed. Do not update that original
+record over the fork.
+
+Version **1.16.1.post1** combines the useful upstream 1.15.18–1.16.1 fixes with
+all our previous custom features. The version convention is
+`<upstream baseline>.post<N>`: increment the post number for our changes, and
+advance the baseline when bringing in a newer official release. HA's manifest
+and the GitHub tag (`v1.16.1.post1`) must match. These are standard Python/HA
+post-release versions, not prereleases.
+
 ## 🏠 Home Assistant Integration Features
 
 - 🔧 **470+ settable fields** automatically discovered across 8 configuration pages
@@ -16,7 +32,7 @@ Inspired by work in https://github.com/Pdobry/xcc-graph.
 1. **Add Custom Repository**:
    - Open HACS in Home Assistant
    - Click the 3 dots (⋮) → "Custom repositories"
-   - Add repository: `https://github.com/pvyleta/xcc-integration`
+   - Add repository: `https://github.com/JiggsNephron/xcc-integration`
    - Category: `Integration`
 
 2. **Install Integration**:

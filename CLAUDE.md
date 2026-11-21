@@ -34,6 +34,14 @@ The same `tests/` dir is run by both CI jobs. HA-dependent tests guard themselve
 
 `const.VERSION` is read dynamically from `manifest.json` at import — manifest is the single source of truth.
 
+Fork releases use `<upstream baseline>.post<N>` (starting with 1.16.1.post1).
+Increment the post-release number for our changes; advance the baseline only
+when incorporating a newer upstream release. Do not overwrite old tags: the
+fork and upstream independently used v1.15.18 for different commits. Prefer
+upstream commit SHAs when fetching/backporting such historical releases.
+Keep PAGE-* schedule/identity aliases and group-2 curve routing intact when
+adapting upstream's broader circuit-local namespacing.
+
 ## Architecture (the integration)
 
 - **Two-tier page model is the core design.** *Descriptor* pages (lowercase, e.g. `fve.xml`) carry type/UI metadata and are fetched **once** at first refresh into `coordinator.entity_configs`. *Data* pages (UPPERCASE, e.g. `FVE4.XML`) carry live `<INPUT P VALUE NAME>` values and are fetched **every poll**. Page lists: `XCC_DESCRIPTOR_PAGES` / `XCC_DATA_PAGES` in [const.py](custom_components/xcc/const.py). Keep the lowercase↔UPPERCASE pairing when adding pages.
@@ -88,7 +96,7 @@ The user's live controller is at **192.168.0.50** (default creds `xcc`/`xcc`); t
 1. `GET /LOGIN.XML` → grab the `SoftPLC` session cookie.
 2. `passhash = sha1(session_id + password)`; `POST {USER, PASS}` to `/RPC/WEBSES/create.asp` (200 + no `<LOGIN>` = success).
 3. `GET /<page>` for each page. Use ONE connection, sequential, with ~200 ms gaps (the controller enforces a 1-connection limit → HTTP 500 otherwise).
-4. Save **raw bytes** so each file keeps its own encoding declaration — descriptor pages are lowercase UTF-8 (e.g. `fvesoc.xml`), data pages are UPPERCASE `windows-1250` (e.g. `FVESOC1.XML`). New fixtures go in `tests/sample_data/`.
+4. Save **raw bytes** so each file keeps its own encoding declaration — descriptor pages are lowercase UTF-8 (e.g. `fvesoc.xml`), data pages are UPPERCASE `windows-1250` (e.g. `FVESOC1.XML`). New fixtures go in `tests/sample_data/`. Older fixtures were re-saved as UTF-8 under the same declaration (non-ASCII already lost), so tests read samples through `tests/sample_io.read_sample_xml`, never `open(..., encoding="utf-8")`.
 
 **Logout:** there is no working logout endpoint — `POST /RPC/WEBSES/destroy.asp` just returns "Server disconnected". Free the controller's single connection slot by closing the HTTP session; the server-side `SoftPLC` session then times out on its own.
 

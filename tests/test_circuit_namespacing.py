@@ -98,7 +98,7 @@ class TestPropNamespacing:
 
     def test_system_wide_props_untouched(self):
         """Shared props must keep their global names."""
-        for prop in ("SVENKU", "FVE-STATS", "SCHYBA"):
+        for prop in ("SVENKU", "FVE-CONFIG-ENABLED", "SCHYBA"):
             assert qualify_circuit_prop(prop, 2) == prop
 
     def test_roundtrip(self):

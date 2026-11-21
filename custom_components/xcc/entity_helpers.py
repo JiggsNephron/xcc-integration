@@ -70,6 +70,18 @@ def circuit_of_prop(prop: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _circuit_base_props(prop: str) -> tuple[str, ...]:
+    """Both native descriptor spellings; PAGE aliases retain their old IDs."""
+    base = _circuit_base_prop(prop)
+    if base is None:
+        return ()
+    match = _OKRUH_PROP_RE.fullmatch((prop or "").upper())
+    if not match:
+        return (base,)
+    suffix = match.group(2)
+    return tuple(dict.fromkeys((base, f"TO-{suffix}", suffix)))
+
+
 def number_step_for_prop(prop: str, configured_step: float | None) -> float:
     """Return the HA increment for an XCC number property.
 
@@ -192,9 +204,10 @@ def lookup_with_normalized_fallback(
     # byte-identical for every ?page=N and describes them under the bare name.
     # Fall back so secondary circuits inherit circuit 0's entity type, unit,
     # options and read-only status overrides.
-    base_prop = _circuit_base_prop(prop)
-    if base_prop is not None:
-        return lookup_with_normalized_fallback(base_prop, table, default)
+    for base_prop in _circuit_base_props(prop):
+        config = lookup_with_normalized_fallback(base_prop, table)
+        if config is not None:
+            return config
 
     return default
 
@@ -251,6 +264,14 @@ def configured_name_config(prop: str, page: str, config: dict, values: dict) -> 
     prefix = usable(values.get(reference)) if reference else ""
     feature_en = config.get("friendly_name_en") or config.get("friendly_name") or prop
     feature_cs = config.get("friendly_name") or config.get("friendly_name_en") or prop
+    # Undescribed secondary-circuit fields should show a local feature label,
+    # not repeat the technical OKRUH namespace after the configured room name.
+    if circuit_of_prop(prop) is not None:
+        suffix = prop.split("-", 1)[1]
+        if feature_en == prop:
+            feature_en = suffix
+        if feature_cs == prop:
+            feature_cs = suffix
     if reference:
         prefix = prefix or f"Block {reference.split('-')[0][1:]}"
         # Column meanings on nast.xml's per-block power restriction rows.
@@ -432,7 +453,7 @@ def process_entities(
         # Circuit-namespaced props are described by their bare counterpart
         # (okruh.xml is shared across circuits), so they are descriptor-backed
         # even though the namespaced key itself is absent from the table.
-        has_descriptor = prop in entity_configs or _circuit_base_prop(prop) in entity_configs
+        has_descriptor = lookup_with_normalized_fallback(prop, entity_configs) is not None
         is_nast_entity = page.upper().startswith("NAST")
         is_sysconfig_entity = prop.startswith("SYSCONFIG-")
         if has_descriptor or is_nast_entity or is_sysconfig_entity:
