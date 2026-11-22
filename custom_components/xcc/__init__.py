@@ -106,12 +106,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "configuration_url": f"http://{coordinator.ip_address}",
     }
 
-    # Register the main XCC controller device BEFORE setting up platforms
-    # This ensures the device exists when sub-devices try to reference it via via_device
+    # Register the main XCC controller device BEFORE setting up platforms:
+    # sub-devices link to it by its registry id.
     device_registry = dr.async_get(hass)
     if device_info:
         _LOGGER.debug("Registering main XCC controller device in device registry")
-        device_registry.async_get_or_create(
+        main_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers=device_info["identifiers"],
             name=device_info["name"],
@@ -120,6 +120,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sw_version=device_info.get("sw_version"),
             configuration_url=device_info.get("configuration_url"),
         )
+        coordinator.set_main_device_id(main_device.id)
         _LOGGER.info("✅ Main XCC controller device registered")
     else:
         _LOGGER.warning("⚠️  Coordinator device_info not available, device registration skipped")

@@ -32,7 +32,7 @@ async def async_setup_entry(
     """Set up XCC number entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    _LOGGER.info("🚀 Setting up XCC number platform")
+    _LOGGER.debug("🚀 Setting up XCC number platform")
 
     # NEVER wait for first refresh to avoid ConfigEntryNotReady timeout issues
     # Instead, create entities immediately if data is available, or set up listener for later
@@ -44,7 +44,7 @@ async def async_setup_entry(
             return []
 
         numbers_data = coordinator.data.get("numbers", {})
-        _LOGGER.info("📊 Found %d number entities in coordinator data", len(numbers_data))
+        _LOGGER.debug("📊 Found %d number entities in coordinator data", len(numbers_data))
 
         if not numbers_data:
             _LOGGER.warning("❌ No number data in coordinator - check entity processing")
@@ -59,7 +59,7 @@ async def async_setup_entry(
                 if entity_type == "number" and coordinator.is_writable(prop):
                     number = XCCNumber(coordinator, entity_data)
                     numbers.append(number)
-                    _LOGGER.info("✅ Number: %s | Range:[%s-%s] | Unit:%s | Value:%s",
+                    _LOGGER.debug("✅ Number: %s | Range:[%s-%s] | Unit:%s | Value:%s",
                         number.name, number.native_min_value, number.native_max_value,
                         number.native_unit_of_measurement or "none", number.native_value)
                 else:
@@ -94,7 +94,7 @@ async def async_setup_entry(
 
         # Register the update listener
         coordinator.async_add_listener(_on_coordinator_update)
-        _LOGGER.info("📡 Registered listener for future coordinator updates")
+        _LOGGER.debug("📡 Registered listener for future coordinator updates")
 
 
 class XCCDuration(XCCEntity, NumberEntity):
@@ -247,7 +247,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
                     import time
 
                     timestamp = time.strftime("%H:%M:%S")
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator numbers data)",
                         timestamp,
                         self.entity_id,
@@ -291,7 +291,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             # Convert float to string for XCC
             str_value = str(value)
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 "🔢 Setting number %s (%s) to %s", self.name, self._prop, str_value
             )
             _LOGGER.debug("Entity data for %s: %s", self.name, self._entity_data)
@@ -311,7 +311,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             success = await self.coordinator.async_set_entity_value(entity_id, str_value)
 
             if success:
-                _LOGGER.info("✅ Successfully set number %s to %s", self.name, value)
+                _LOGGER.debug("✅ Successfully set number %s to %s", self.name, value)
                 # Note: coordinator already requests refresh, no need to do it again here
             else:
                 _LOGGER.error("❌ Failed to set number %s to %s", self.name, value)

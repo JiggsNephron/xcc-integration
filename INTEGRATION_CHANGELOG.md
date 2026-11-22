@@ -2,6 +2,22 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.2.post1] - 2026-11-22
+
+### Upstream reliability backport
+
+- Give each web data page its own 10-second timeout within a 60-second poll
+  budget. Preserve successful pages when another times out, while treating
+  an entirely failed poll as unavailable.
+- Move routine per-entity, per-poll and write tracing to DEBUG. Warning and
+  error reporting remains enabled; no sensor forces DEBUG logging.
+- Link existing logical devices through the controller's registry ID on
+  HA 2026.8+, retaining compatibility with older cores and avoiding the
+  deprecated via_device tuple on current HA.
+- Preserve all 1.16.1.post1 fork features, independent Modbus polling,
+  sanitation controls, schedule identities, entity IDs, types and grouping.
+  No controller settings or entity-registry migrations are performed.
+
 ## [1.16.1.post1] - 2026-11-21
 
 ### Upstream compatibility backport

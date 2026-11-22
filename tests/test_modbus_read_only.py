@@ -323,12 +323,14 @@ async def test_startup_interfaces_are_independent(env, web_ok, modbus_enabled, m
             self.loaded_platforms = []
             self.web_ready = False
             self.async_shutdown = AsyncMock()
+            self.set_main_device_id = Mock()
         async def async_config_entry_first_refresh(self):
             if not web_ok:
                 raise HAError("web unavailable")
     env.make_module("_xcc_modbus_test.coordinator", XCCDataUpdateCoordinator=Web)
     env.make_module("_xcc_modbus_test.entity", async_regenerate_entity_ids=Mock())
     registry = Mock()
+    registry.async_get_or_create.return_value.id = "existing-controller"
     env.make_module("homeassistant.helpers.device_registry", async_get=lambda hass: registry)
     env.client.connect_ok = modbus_ok
     env.entry.options = {"modbus_enabled": modbus_enabled}
@@ -346,6 +348,10 @@ async def test_startup_interfaces_are_independent(env, web_ok, modbus_enabled, m
     spec.loader.exec_module(bootstrap)
     assert await bootstrap.async_setup_entry(env.hass, env.entry)
     web = env.hass.data["xcc"]["test"]
+    web.set_main_device_id.assert_called_once_with("existing-controller")
+    assert registry.async_get_or_create.call_args.kwargs["identifiers"] == {
+        ("xcc", env.entry.data["ip_address"])
+    }
     assert web.web_ready is web_ok
     assert (web.modbus_coordinator is not None) is modbus_enabled
     assert web.loaded_platforms == (bootstrap.PLATFORMS_TO_SETUP if web_ok else ["sensor"])

@@ -8,7 +8,13 @@ from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import (
+    CONF_IP_ADDRESS,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    MAJOR_VERSION,
+    MINOR_VERSION,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
@@ -19,6 +25,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_LANGUAGE,
     DEFAULT_MISSING_PAGE_ALERT_POLLS,
+    DEFAULT_POLL_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DESCRIPTOR_OVERRIDES,
@@ -41,6 +48,11 @@ from .value_writer import resolve_property
 from .system_faults import FaultTracker, fault_definitions
 
 _LOGGER = logging.getLogger(__name__)
+
+# HA 2026.8 added via_device_id (a device registry id) and deprecated the
+# (domain, identifier) via_device tuple, removed in 2027.8. Older cores reject
+# via_device_id outright.
+_HAS_VIA_DEVICE_ID = (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8)
 
 
 class XCCDataUpdateCoordinator(DataUpdateCoordinator):
@@ -73,6 +85,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Store discovered entities and their metadata
         self.entities: dict[str, dict[str, Any]] = {}
         self.device_info: dict[str, Any] = {}
+        # Registry id of the main controller device, set by async_setup_entry.
+        self.main_device_id: str | None = None
         self._client = None  # Persistent XCC client for session reuse
         self.descriptor_parser = None  # Parser for entity type detection
         self.entity_configs = {}  # Cached entity configurations
@@ -253,10 +267,18 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug(
                 "Update triggered by: %s", getattr(self, "_update_source", "unknown")
             )
-            pages_data = await asyncio.wait_for(
-                client.fetch_pages(data_pages),
-                timeout=DEFAULT_TIMEOUT,
+            pages_data = await client.fetch_pages(
+                data_pages,
+                page_timeout=DEFAULT_TIMEOUT,
+                total_timeout=DEFAULT_POLL_TIMEOUT,
             )
+            missing_pages = missing_data_pages(data_pages, pages_data)
+            # Per-page timeouts never raise, so an unreachable controller would
+            # otherwise "succeed" with no entities instead of going unavailable.
+            if data_pages and len(missing_pages) == len(set(data_pages)):
+                raise UpdateFailed(
+                    f"no data page fetched ({len(missing_pages)} failed)"
+                )
             _LOGGER.debug(
                 "Successfully fetched %d pages from XCC controller", len(pages_data)
             )
@@ -306,14 +328,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Record data-gathering health: which expected data pages failed to
             # fetch this poll (fetch_pages returns "Error:" for the ones it missed).
             self._note_gather_result(
-                missing_data_pages(data_pages, pages_data),
+                missing_pages,
                 poll_failed=False,
                 expected=len(data_pages),
             )
 
             # Log summary of processed data
             entity_counts = {key: len(value) for key, value in processed_data.items()}
-            _LOGGER.info("XCC data update successful: %s", entity_counts)
+            _LOGGER.debug("XCC data update successful: %s", entity_counts)
 
             # Update device info on first successful fetch
             if not self.device_info:
@@ -418,9 +440,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "sensors": len(processed_data["sensors"]),
             "total": len(processed_data["entities"]),
         }
-        _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
-        _LOGGER.info("Final entity distribution: %s", entity_counts)
-        _LOGGER.info(
+        _LOGGER.debug("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
+        _LOGGER.debug("Final entity distribution: %s", entity_counts)
+        _LOGGER.debug(
             "Returning processed_data with keys: %s", list(processed_data.keys())
         )
         return processed_data
@@ -510,8 +532,19 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "model": config["model"],
                 "sw_version": "Unknown",
                 "configuration_url": f"http://{self.ip_address}",
-                "via_device": (DOMAIN, self.ip_address),  # Link to main controller
+                **self._parent_device_link(),
             }
+
+    def _parent_device_link(self) -> dict[str, Any]:
+        """Return the device_info entry linking a sub-device to the controller."""
+        if _HAS_VIA_DEVICE_ID and self.main_device_id:
+            return {"via_device_id": self.main_device_id}
+        return {"via_device": (DOMAIN, self.ip_address)}
+
+    def set_main_device_id(self, device_id: str) -> None:
+        """Record the registered controller device and relink the sub-devices."""
+        self.main_device_id = device_id
+        self._init_device_info()
 
     def get_device_info_for_entity(self, entity_id: str) -> dict[str, Any]:
         """Get device info for a specific entity."""
@@ -531,7 +564,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_force_update(self) -> None:
         """Force an immediate update of all entity values."""
-        _LOGGER.info("🔄 FORCING IMMEDIATE COORDINATOR UPDATE")
+        _LOGGER.debug("🔄 FORCING IMMEDIATE COORDINATOR UPDATE")
         self._update_source = "force_update"
         await self.async_request_refresh()
 
@@ -558,7 +591,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_entity_value(self, entity_id: str, value: Any) -> bool:
         """Set a value on the XCC controller (method name expected by entities)."""
         try:
-            _LOGGER.info("🎛️ Setting entity %s to value %s", entity_id, value)
+            _LOGGER.debug("🎛️ Setting entity %s to value %s", entity_id, value)
 
             resolution = resolve_property(entity_id, self.data, self.entity_configs)
             prop = resolution.prop
@@ -579,7 +612,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 entity_id, prop, resolution.method,
             )
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 "🔧 Setting XCC property %s to value %s for entity %s",
                 prop,
                 value,
@@ -593,7 +626,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 try:
                     success = await client.set_value(prop, value, internal_name=internal_name)
                     if success:
-                        _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                        _LOGGER.debug("✅ Successfully set XCC property %s to %s", prop, value)
                         # Request immediate data refresh to update state
                         _LOGGER.debug("Requesting data refresh after successful property set")
                         await self.async_request_refresh()
@@ -619,7 +652,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     ) as client:
                         success = await client.set_value(prop, value, internal_name=internal_name)
                         if success:
-                            _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                            _LOGGER.debug("✅ Successfully set XCC property %s to %s", prop, value)
                             # Request immediate data refresh to update state
                             _LOGGER.debug("Requesting data refresh after successful property set")
                             await self.async_request_refresh()
