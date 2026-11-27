@@ -2,6 +2,16 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.2.post2] - 2026-11-27
+
+- Recognize both legacy XML and current XCC HTML login forms when checking
+  cached sessions, fetching data and validating authentication responses.
+- Reauthenticate and retry the requested page after session expiry. Propagate
+  authentication/retry failures instead of returning login HTML as sensor data;
+  retain the existing fallback for genuine encoding errors.
+- No entity identities, descriptors, command routing, Modbus configuration,
+  controller settings, dashboards or automations are changed.
+
 ## [1.16.2.post1] - 2026-11-22
 
 ### Upstream reliability backport

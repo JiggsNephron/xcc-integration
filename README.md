@@ -13,11 +13,11 @@ An old Marketplace/HACS record for the original repository may retain its old
 version even while this fork's code is installed. Do not update that original
 record over the fork.
 
-Version **1.16.2.post1** combines the useful upstream 1.15.18–1.16.2 fixes with
+Version **1.16.2.post2** combines the useful upstream 1.15.18–1.16.2 fixes with
 all our previous custom features. The version convention is
 `<upstream baseline>.post<N>`: increment the post number for our changes, and
 advance the baseline when bringing in a newer official release. HA's manifest
-and the GitHub tag (`v1.16.2.post1`) must match. These are standard Python/HA
+and the GitHub tag (`v1.16.2.post2`) must match. These are standard Python/HA
 post-release versions, not prereleases.
 
 ## 🏠 Home Assistant Integration Features
