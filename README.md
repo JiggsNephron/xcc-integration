@@ -1,56 +1,135 @@
-# AC Heating XCC Heat Pump Controller Integration
+# AC Heating XCC for Home Assistant — combined fork
 
-Home Assistant integration for AC Heating XCC heat pump controllers with photovoltaic integration. Monitor and control your heat pump system directly from Home Assistant with automatic entity discovery and bilingual support.
+Monitor and control an AC Heating XCC heat-pump controller locally from Home
+Assistant, with separate heating-circuit entities, native controls and optional
+read-only Modbus measurements.
 
-Inspired by work in https://github.com/Pdobry/xcc-graph.
+This is the **JiggsNephron community fork** of
+[pvyleta/xcc-integration](https://github.com/pvyleta/xcc-integration), based on
+upstream **1.16.2** with the additions below. It is not an AC Heating/Teco
+vendor-supported integration. Credit to the upstream contributors and the
+earlier [xcc-graph project](https://github.com/Pdobry/xcc-graph).
 
-## This combined fork
+**Current integration release: [v1.16.2.post2](https://github.com/JiggsNephron/xcc-integration/releases/tag/v1.16.2.post2).**
+See the [release history](https://github.com/JiggsNephron/xcc-integration/releases)
+and [integration changelog](INTEGRATION_CHANGELOG.md) for exact changes.
 
-Install **JiggsNephron/xcc-integration** for this fork, not the original
-pvyleta repository. Both use the `xcc` integration domain and installation
-directory; they are alternatives, not two integrations to install together.
-An old Marketplace/HACS record for the original repository may retain its old
-version even while this fork's code is installed. Do not update that original
-record over the fork.
+## What this fork adds
 
-Version **1.16.2.post2** combines the useful upstream 1.15.18–1.16.2 fixes with
-all our previous custom features. The version convention is
-`<upstream baseline>.post<N>`: increment the post number for our changes, and
-advance the baseline when bringing in a newer official release. HA's manifest
-and the GitHub tag (`v1.16.2.post2`) must match. These are standard Python/HA
-post-release versions, not prereleases.
+- **Native schedule controls:** edit verified weekly zone/DHW attenuation
+  periods, sanitation start time and scheduled DHW temperature-raising times
+  using HA time entities. Existing schedule sensors remain available.
+- **Heating-curve controls:** per-circuit shift and twelve outside/water
+  temperature pairs, with writes routed to the correct curve page.
+- **Better numeric controls:** descriptor-aware steps and limits, including
+  0.1°C room/DHW targets and supported temperature/hysteresis fields; minute-based
+  editors for selected durations rather than treating them as clock times.
+- **Independent circuit status:** separate demand/activity, attenuation and
+  influence readings for each enabled circuit, without merging similarly named
+  registers from different circuits.
+- **DHW sanitation visibility:** a read-only active-cycle indicator and an
+  explicit Stop action alongside the existing Run action.
+- **Controller fault diagnostics:** named current faults and a fault count,
+  with observed activation/clearance logged. Notifications remain your own
+  automations; this does not import the controller's historical error log.
+- **Optional read-only Modbus:** flow temperature, return temperature and water
+  flow rate on an independent polling loop, plus a bounded diagnostic-read action
+  using the same connection. No Modbus writes are exposed.
+- **Clearer names and grouping:** English/Czech support, names taken from each
+  circuit's controller configuration, logical device groups, and corrections to
+  units and status-versus-control classification. No room names are hardcoded.
+- **Visible command failures:** unsuccessful writes raise HA errors rather than
+  appearing successful. A communication error means the command was not
+  confirmed, not proof that the controller did not apply it.
+- **Current login-page compatibility:** recognise both legacy XML and modern
+  HTML login forms, recover expired sessions, and reject authentication failures
+  instead of parsing login HTML as measurements.
 
-## 🏠 Home Assistant Integration Features
+The fork also retains upstream fixes for deterministic discovery, circuit
+namespacing, per-page polling timeouts and current HA device-parent links.
+The available entities depend on the pages/features enabled on your controller;
+not every installation exposes every control.
 
-- 🔧 **470+ settable fields** automatically discovered across 8 configuration pages
-- 📊 **Live data monitoring** with real-time sensor values
-- 🌐 **Bilingual support** (English/Czech with auto-detection)
-- 📋 **Organized by device** (heating, PV, hot water, auxiliary source, etc.)
+Details: [web controls](docs/web-control-parity.md),
+[fault diagnostics](docs/system-faults.md),
+[names and command errors](docs/names-and-command-errors.md), and
+[earlier parity/migration fixes](docs/audit-fixes.md). These documents include
+dated implementation notes; use the release changelog for the current version.
 
-## 📦 HACS Installation
+### What is not included
 
-1. **Add Custom Repository**:
-   - Open HACS in Home Assistant
-   - Click the 3 dots (⋮) → "Custom repositories"
-   - Add repository: `https://github.com/JiggsNephron/xcc-integration`
-   - Category: `Integration`
+This repository does **not** install a house dashboard, COP/heat-energy helpers,
+Shelly probe configuration or site-specific DHW/zone automations. Modbus sensors
+report raw values without calibration offsets or COP corrections. The integration
+does not redesign your hydraulic system or replace the controller's safety logic.
 
-2. **Install Integration**:
-   - Go to HACS > Integrations
-   - Search for "XCC Heat Pump Controller"
-   - Click "Download" and restart Home Assistant
+## Requirements
 
-3. **Configure Integration**:
-   - Settings > Devices & Services > "Add Integration"
-   - Search for "XCC Heat Pump Controller"
-   - Enter your XCC controller details
+- **Home Assistant 2026.10 or newer.** The store metadata declares this minimum;
+  the integration uses a compatible PyModbus dependency (minimum 3.13.1).
+- A locally reachable XCC controller, its IP address and web credentials.
+  A stable address/DHCP reservation is useful. Do not expose the controller's
+  HTTP interface directly to the internet.
+- Supported controller pages/firmware. Start with web access; Modbus is optional
+  and disabled by default.
 
-## 🔧 Development & Testing
+## Install this fork
 
-### Optional read-only Modbus telemetry
+### New installations
 
-Version 1.15.30 targets Home Assistant 2026.10 or newer and uses its compatible
-PyModbus dependency (minimum 3.13.1), allowing Home Assistant to update it.
+1. In **Marketplace** (current HA) or **HACS** (older installations), add
+   `https://github.com/JiggsNephron/xcc-integration` as a **custom repository**,
+   category **Integration**. Accept the store warning if prompted.
+2. Find **AC Heating XCC Heat Pump Controller** and check that the repository
+   owner is **JiggsNephron**. Download a tagged release, not an experimental branch.
+3. Restart Home Assistant to load the integration.
+4. Go to **Settings → Devices & Services → Add Integration**, search for
+   **XCC Heat Pump Controller**, and enter the controller IP and credentials.
+5. Choose English or Czech and a web polling interval (default **120 seconds**).
+   Leave **entity-ID regeneration off** unless deliberately migrating legacy IDs.
+6. Check the readings before using controls. If enabling Modbus, read the
+   single-connection warning below first. Verify schedules and curves against
+   the controller UI before changing heating settings.
+
+### Existing XCC users: read before switching
+
+**The upstream integration and this fork both use domain `xcc` and folder
+`custom_components/xcc`. They are alternatives, not integrations to install
+side by side.** Two store records do not mean two independent installations.
+
+- Back up HA and record your existing entity IDs and important consumers before
+  switching repositories or updating from an older version.
+- Keep the existing XCC config entry. Do not delete/re-add it as a routine update,
+  enable ID regeneration, or delete registry entries to make an update install.
+- If the store reports a repository/folder ownership conflict, stop and resolve
+  ownership first. Blindly uninstalling either repository can remove the shared
+  integration files. There is no universal automatic repository-switch procedure
+  provided by this fork.
+- After installation and restart, check the store's installed version, entity
+  availability/IDs, schedules and existing automations. Do not overwrite this
+  fork with an update from an old upstream store record.
+- Current fork updates are designed to retain established entity identities.
+  Older releases did correct some domains and page-specific schedule identities;
+  a switch from another version is **not** a blanket guarantee of identical IDs.
+  Review the [changelog](INTEGRATION_CHANGELOG.md) and
+  [migration notes](docs/audit-fixes.md) for your starting version.
+
+### Versions and upstream relationship
+
+Fork releases use **`<upstream baseline>.post<N>`**: `1.16.2.post2` is this fork's
+second post-release based on upstream 1.16.2. The post number advances for fork
+changes; the baseline advances when newer upstream changes are incorporated.
+These are regular Python/HA post-release versions, not prereleases. The manifest
+and release tag match. Documentation-only commits on `main` do not imply a new
+integration release or require an HA update.
+
+Use the [upstream repository](https://github.com/pvyleta/xcc-integration) for the
+original project and this fork's [issues](https://github.com/JiggsNephron/xcc-integration/issues)
+for fork-specific problems. Clean upstream contributions are kept separate from
+the combined fork changes.
+
+## Optional read-only Modbus telemetry
+
 Modbus telemetry is **off by default**. Enable it in the XCC integration's
 Configure options (or during initial setup). The polling interval is independent
 of web polling: default 15 seconds, configurable from 10 to 3600 seconds.
@@ -68,7 +147,8 @@ The initial sensor set is:
 | `sensor.xcc_modbus_return_temperature` | 284 | signed 16-bit / 100, °C |
 | `sensor.xcc_modbus_water_flow_rate` | 360 | unsigned 16-bit / 100, m³/h |
 
-Entities use measurement state class and belong to the existing XCC device.
+Entities use measurement state class and are grouped under the controller's
+**Unit Status** device.
 They use raw readings: no temperature offsets, inferred heat output, or COP
 corrections are applied. Register availability and physical probe installation
 depend on the controller firmware and installation.
@@ -134,11 +214,13 @@ Multiple XCC controllers need distinct entity IDs; the registry may suffix the
 suggested IDs for later controllers. Do not overwrite an unrelated entity to
 claim an ID. Installing this update by itself does not migrate the YAML sensors.
 
-### Development Setup
+## Development and testing
+
+### Development setup
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/pvyleta/xcc-integration
+   git clone https://github.com/JiggsNephron/xcc-integration.git
    cd xcc-integration
    ```
 
@@ -150,17 +232,51 @@ claim an ID. Installing this update by itself does not migrate the YAML sensors.
 
 3. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
+   pip install -r tests/requirements-test.txt
    ```
 
 ### Running Tests
 
-The integration includes comprehensive tests to ensure reliability:
+The lightweight suite runs without Home Assistant; HA-dependent tests are
+skipped. Use UTF-8 mode on Windows for the non-ASCII XML fixtures:
 
 ```bash
 # Run all tests
-python -m pytest tests/ -v
+python -X utf8 -m pytest tests/ -q
 ```
+
+For the full suite, use a Python version supported by the pinned Home Assistant
+in `requirements-dev.txt`, install that file, and run the same tests. CI runs
+lightweight Python 3.11/3.12/3.13 jobs and a full HA job on Python 3.14. Tagged
+releases are published only after the core CI jobs pass.
+
+For `v1.16.2.post2`, full HA CI passed **554 tests** (7 skipped). Regression tests
+cover session handling, circuit/page routing, entity metadata, native controls,
+fault decoding and Modbus isolation. Tests use fixtures/mocked writes, not live
+heating commands; passing tests does not establish compatibility with every
+controller firmware or prove measurement accuracy.
+
+## Limitations and troubleshooting
+
+- A working network connection is still required. A loose cable or an XCC
+  address of `0.0.0.0` cannot be fixed by an HA reload or by the login-page fix.
+- Web data is polled, not pushed. Short-lived controller faults between polls
+  can be missed; the fault sensor is not a replacement for controller protections.
+- Native attenuation schedules describe **attenuation start/end**, not direct
+  heating-on/off periods. Selected duration editors support 0–1439 minutes; this
+  is an editor limit, not a claim about the PLC's hardware limit.
+- Some entities may be unavailable when their feature/page is unsupported or
+  disabled. Do not interpret missing diagnostics as a clear fault state.
+- A known deprecation warning remains in the optional Modbus parent-device
+  lookup on current HA; HA reports a removal deadline of 2027.8. The modern
+  web-device `via_device_id` links are already supported.
+- The separate HACS publication validator currently flags the repository's
+  missing `LICENSE` file. Do not confuse that catalogue/publication check with
+  the core test suite or claim that this fork is an officially approved listing.
+
+When reporting a problem, include the exact fork version, HA version, controller
+firmware (if known), whether web/Modbus is affected and relevant sanitised logs.
+Never post passwords, cookies, session files or an unsanitised controller scrape.
 
 ## 📚 Configuration Pages
 
