@@ -37,7 +37,7 @@ and [integration changelog](INTEGRATION_CHANGELOG.md) for exact changes.
   using the same connection. No Modbus writes are exposed.
 - **Clearer names and grouping:** English/Czech support, names taken from each
   circuit's controller configuration, logical device groups, and corrections to
-  units and status-versus-control classification. No room names are hardcoded.
+  units and status-versus-control classification.
 - **Visible command failures:** unsuccessful writes raise HA errors rather than
   appearing successful. A communication error means the command was not
   confirmed, not proof that the controller did not apply it.
@@ -55,13 +55,6 @@ Details: [web controls](docs/web-control-parity.md),
 [names and command errors](docs/names-and-command-errors.md), and
 [earlier parity/migration fixes](docs/audit-fixes.md). These documents include
 dated implementation notes; use the release changelog for the current version.
-
-### What is not included
-
-This repository does **not** install a house dashboard, COP/heat-energy helpers,
-Shelly probe configuration or site-specific DHW/zone automations. Modbus sensors
-report raw values without calibration offsets or COP corrections. The integration
-does not redesign your hydraulic system or replace the controller's safety logic.
 
 ## Requirements
 
@@ -149,9 +142,8 @@ The initial sensor set is:
 
 Entities use measurement state class and are grouped under the controller's
 **Unit Status** device.
-They use raw readings: no temperature offsets, inferred heat output, or COP
-corrections are applied. Register availability and physical probe installation
-depend on the controller firmware and installation.
+The sensors expose raw controller-register values. Register availability and
+interpretation depend on the controller firmware.
 
 Web and Modbus use separate coordinators, availability states, connections and
 polling intervals. A failed Modbus read does not block web controls. If the web
@@ -258,8 +250,6 @@ controller firmware or prove measurement accuracy.
 
 ## Limitations and troubleshooting
 
-- A working network connection is still required. A loose cable or an XCC
-  address of `0.0.0.0` cannot be fixed by an HA reload or by the login-page fix.
 - Web data is polled, not pushed. Short-lived controller faults between polls
   can be missed; the fault sensor is not a replacement for controller protections.
 - Native attenuation schedules describe **attenuation start/end**, not direct
