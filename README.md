@@ -34,7 +34,10 @@ and [integration changelog](INTEGRATION_CHANGELOG.md) for exact changes.
   automations; this does not import the controller's historical error log.
 - **Optional read-only Modbus:** flow temperature, return temperature and water
   flow rate on an independent polling loop, plus a bounded diagnostic-read action
-  using the same connection. No Modbus writes are exposed.
+  using the same connection. These readings enable heat-output and COP
+  calculations in Home Assistant when combined with a suitable electrical-power
+  or energy measurement. COP helpers are user-configured; accuracy depends on
+  the measurements and matching system boundaries. No Modbus writes are exposed.
 - **Clearer names and grouping:** English/Czech support, names taken from each
   circuit's controller configuration, logical device groups, and corrections to
   units and status-versus-control classification.
